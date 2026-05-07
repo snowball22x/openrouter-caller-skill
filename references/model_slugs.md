@@ -243,6 +243,7 @@ To generate an image, use the standard Chat Completions API (`/api/v1/chat/compl
 | Slug | Display Name | Notes |
 |---|---|---|
 | `openai/gpt-5.4-image-2` | GPT-5.4 Image 2 | Top-tier image generation from OpenAI |
+| `google/gemini-3-pro-image-preview` | Gemini 3 Pro Image Preview | Highest-quality Gemini image generation (nano banana pro) |
 | `google/gemini-3.1-flash-image-preview` | Gemini 3.1 Flash Image | Fast, high-quality image generation |
 | `google/gemini-2.5-flash-image` | Gemini 2.5 Flash Image | Stable image generation variant |
 | `bytedance-seed/seedream-4.5` | Seedream 4.5 | Exceptional portrait refinement and multi-image composition |
