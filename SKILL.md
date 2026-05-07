@@ -1,6 +1,6 @@
 ---
 name: openrouter-caller
-description: OpenRouter API calling guide. Use when the user requests to call an AI model via OpenRouter, or when calling models like Claude Sonnet 4.6, Opus 4.7, Perplexity Sonar Pro Search, GPT-5.5, Gemini 2.5 Pro, Llama 4 Maverick, DeepSeek R1, Kimi K2.6, etc. Also handles tilde latest-alias slugs (~anthropic/claude-sonnet-latest, ~google/gemini-flash-latest, etc.) and natural language "latest" model requests. Covers multimodal generation: image (GPT-5.4 Image 2, Gemini 3.1 Flash Image, Seedream 4.5), video (Veo 3.1, Seedance 2.0), and speech/TTS (Gemini 3.1 Flash TTS). Provides instructions on how to correctly identify and use exact model slugs to avoid fallback to incorrect models.
+description: "OpenRouter API calling guide. Use when the user requests to call an AI model via OpenRouter, or when calling models like Claude Sonnet 4.6, Opus 4.7, Perplexity Sonar Pro Search, GPT-5.5, Gemini 2.5 Pro, Llama 4 Maverick, DeepSeek R1, Kimi K2.6, etc. Also handles tilde latest-alias slugs and natural language latest model requests. Covers multimodal generation: image (GPT-5.4 Image 2, Gemini 3.1 Flash Image, Seedream 4.5), video (Veo 3.1, Seedance 2.0), and speech/TTS (Gemini 3.1 Flash TTS). Provides instructions on how to correctly identify and use exact model slugs to avoid fallback to incorrect models."
 ---
 
 # OpenRouter Caller Skill
