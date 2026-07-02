@@ -157,18 +157,7 @@ description: "Call OpenRouter models safely. Use when a user asks to call OpenRo
 | adversarial_check | `~anthropic/claude-sonnet-latest`, `~openai/gpt-latest`, `~google/gemini-pro-latest` | `~anthropic/claude-opus-latest` | 5 |
 | low_cost_batch | `~google/gemini-flash-latest`, `~anthropic/claude-haiku-latest`, `openai/gpt-5.4-mini` | `~anthropic/claude-sonnet-latest` | 1 |
 
-## S9 — Sequential-Thinking MCP Trigger
-
-| when_to_use_sequential_thinking | trigger_condition |
-|---|---|
-| before complex multi-model workflow | choosing fusion/advisor/subagent combinations |
-| before multi-step pipeline | ordered dependencies or tool orchestration |
-| before high-stakes call | errors costly or hard to detect |
-| before ambiguous call | unclear endpoint/model/tool/reasoning settings |
-| before adversarial critique | need explicit attack/defense plan |
-| before long-document synthesis | need evidence tracking across chunks |
-
-## S10 — Minimal Checklist
+## S9 — Minimal Checklist
 
 | step | command/action |
 |---|---|

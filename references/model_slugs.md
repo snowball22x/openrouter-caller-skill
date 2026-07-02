@@ -44,16 +44,36 @@
 |---|---|---|
 | `latest sonnet` | `~anthropic/claude-sonnet-latest` | non-tilde latest slug |
 | `claude latest` | ask family or inspect candidates | silently choosing Sonnet |
+| `claude fable latest` | `~anthropic/claude-fable-latest` | mapping to Sonnet/Opus |
+| `fable 5` | `anthropic/claude-fable-5` | `claude-sonnet-5` |
+| `opus fast` / `opus 4.8 fast` | `anthropic/claude-opus-4.8-fast` | regular `anthropic/claude-opus-4.8` if speed requested |
 | `claude 3.7 sonnet` | error/not in supplied live list | remapping to 4.x silently |
 | `sonar pro search` | `perplexity/sonar-pro-search` | `perplexity/sonar-pro` |
 | `gpt latest` | `~openai/gpt-latest` | `openai/gpt-latest` |
+| `gpt 5.5 pro` | `openai/gpt-5.5-pro` | `openai/gpt-5.5` |
+| `gpt 5.3 codex` | `openai/gpt-5.3-codex` | `openai/gpt-5.3-chat` |
 | `gemini flash latest` | `~google/gemini-flash-latest` | `google/gemini-flash-latest` |
+| `gemini 3.5 flash` | `google/gemini-3.5-flash` | older `gemini-2.5-flash` |
+| `lyria` / `music generation` | `google/lyria-3-pro-preview` or `google/lyria-3-clip-preview` | Gemini text/chat models |
 | `deepseek r1` | `deepseek/deepseek-r1-0528` | undated if reproducibility matters |
 | `deepseek r2` | error/not in supplied live list | inventing `deepseek-r2` |
+| `deepseek v4` | ask Pro vs Flash | silently choosing one |
+| `deepseek v4 free` | error/not in supplied live list | inventing `deepseek-v4-*:free` |
 | `kimi k2` | `moonshotai/kimi-k2.6` | old `moonshotai/kimi-k2` |
+| `kimi code` / `kimi k2.7 code` | `moonshotai/kimi-k2.7-code` | `moonshotai/kimi-k2.6` |
+| `kimi latest` | `~moonshotai/kimi-latest` | pinning old K2 |
 | `mistral medium 3.5` | `mistralai/mistral-medium-3-5` | dot slug |
+| `codestral` | `mistralai/codestral-2508` | older Codestral slugs |
+| `devstral` | `mistralai/devstral-2512` | nonexistent `devstral-medium` unless live list later adds it |
+| `voxtral` | `mistralai/voxtral-small-24b-2507` | treating it as TTS output; it is audio-input speech/audio understanding |
 | `nano banana pro` | `google/gemini-3-pro-image` | flash image variants |
+| `nano banana 2` | `google/gemini-3.1-flash-image` | Gemini 3 Pro image |
 | `grok 3` | error/not in supplied live list | mapping to `grok-4.3` silently |
+| `grok 4.20 multi agent` | `x-ai/grok-4.20-multi-agent` | regular `x-ai/grok-4.20` |
+| `grok 4 latest` | ask exact 4.3 vs 4.20 vs 4.20 multi-agent | guessing by decimal/version |
+| `qwen 3.7 max` | `qwen/qwen3.7-max` | `qwen/qwen3.6-max-preview` |
+| `qwen 3.7 plus` | `qwen/qwen3.7-plus` | `qwen/qwen3.6-plus` |
+| `qwen max thinking` | `qwen/qwen3-max-thinking` | `qwen/qwen3.7-max` unless user asked 3.7 |
 | current/search | add `openrouter:web_search` | `:online` |
 
 ## 5. Tilde Latest Aliases
@@ -94,7 +114,10 @@
 |---|---|
 | reproducible current Sonnet | `anthropic/claude-sonnet-5` |
 | latest Sonnet alias | `~anthropic/claude-sonnet-latest` |
+| autonomous long-horizon knowledge/coding work | `anthropic/claude-fable-5` |
+| latest Fable alias | `~anthropic/claude-fable-latest` |
 | strong advisor/judge | `~anthropic/claude-opus-latest` |
+| fastest Opus 4.8 routing | `anthropic/claude-opus-4.8-fast` |
 | fast/cheap worker | `~anthropic/claude-haiku-latest` |
 
 ## 7. OpenAI
@@ -123,14 +146,18 @@
 | `openai/gpt-5-chat` | GPT-5 Chat | 128,000 | 16,384 |
 | `openai/gpt-5-pro` | GPT-5 Pro | 400,000 | 128,000 |
 | `openai/gpt-5-mini` | GPT-5 Mini | 400,000 | 128,000 |
-| `openai/gpt-5-nano` | GPT-5 Nano | 400,000 | ? |
+| `openai/gpt-5-nano` | GPT-5 Nano | 400,000 | 0 |
 | `openai/gpt-5-codex` | GPT-5 Codex | 400,000 | 128,000 |
 | `openai/gpt-5-image` | GPT-5 Image | 400,000 | 128,000 |
 | `openai/gpt-5-image-mini` | GPT-5 Image Mini | 400,000 | 128,000 |
 | `openai/gpt-chat-latest` | GPT Chat Latest | 400,000 | 128,000 |
-| `openai/gpt-4.1` | GPT-4.1 | 1,047,576 | ? |
+| `openai/gpt-4.1` | GPT-4.1 | 1,047,576 | 0 |
 | `openai/gpt-4.1-mini` | GPT-4.1 Mini | 1,047,576 | 32,768 |
 | `openai/gpt-4.1-nano` | GPT-4.1 Nano | 1,047,576 | 32,768 |
+| `openai/gpt-4o` | GPT-4o | 128,000 | 16,384 |
+| `openai/gpt-4o-mini` | GPT-4o Mini | 128,000 | 16,384 |
+| `openai/gpt-4o-search-preview` | GPT-4o Search Preview | 128,000 | 16,384 |
+| `openai/gpt-4o-mini-search-preview` | GPT-4o Mini Search Preview | 128,000 | 16,384 |
 | `openai/o3` | o3 | 200,000 | 100,000 |
 | `openai/o3-pro` | o3 Pro | 200,000 | 100,000 |
 | `openai/o3-mini` | o3 Mini | 200,000 | 100,000 |
@@ -143,30 +170,42 @@
 | `openai/o1-pro` | o1 Pro | 200,000 | 100,000 |
 | `openai/gpt-audio` | GPT Audio | 128,000 | 16,384 |
 | `openai/gpt-audio-mini` | GPT Audio Mini | 128,000 | 16,384 |
-
+| `openai/gpt-oss-120b` | gpt-oss-120b | 131,072 | 131,072 |
+| `openai/gpt-oss-120b:free` | gpt-oss-120b Free | 131,072 | 131,072 |
+| `openai/gpt-oss-20b` | gpt-oss-20b | 131,072 | 0 |
+| `openai/gpt-oss-20b:free` | gpt-oss-20b Free | 131,072 | 32,768 |
+| `openai/gpt-oss-safeguard-20b` | gpt-oss-safeguard-20b | 131,072 | 65,536 |
 
 ## 8. Google Gemini
 
-| Slug | Display name | Context | Notes |
-|---|---|---:|---|
-| `google/gemini-3.5-flash` | Gemini 3.5 Flash | 1M | Latest Flash line |
-| `google/gemini-3.1-pro-preview` | Gemini 3.1 Pro Preview | 1M | Latest Pro preview |
-| `google/gemini-3.1-pro-preview-customtools` | Gemini 3.1 Pro Preview Custom Tools | 1M | Custom tools variant |
-| `google/gemini-3.1-flash-lite` | Gemini 3.1 Flash Lite | 1M | Efficient |
-| `google/gemini-3.1-flash-lite-preview` | Gemini 3.1 Flash Lite Preview | 1M | Preview |
-| `google/gemini-3-flash-preview` | Gemini 3 Flash Preview | 1M | Preview |
-| `google/gemini-2.5-pro` | Gemini 2.5 Pro | 1M | Stable Pro |
-| `google/gemini-2.5-flash` | Gemini 2.5 Flash | 1M | Stable Flash |
-| `google/gemini-2.5-flash-lite` | Gemini 2.5 Flash Lite | 1M | Stable light model |
+| Slug | Display name | Context | Max output | Notes |
+|---|---|---:|---:|---|
+| `google/gemini-3.5-flash` | Gemini 3.5 Flash | 1,048,576 | 65,536 | Latest Flash line; multimodal text/image/file/audio/video input |
+| `google/gemini-3.1-pro-preview` | Gemini 3.1 Pro Preview | 1,048,576 | 65,536 | Latest Pro preview |
+| `google/gemini-3.1-pro-preview-customtools` | Gemini 3.1 Pro Preview Custom Tools | 1,048,756 | 65,536 | Custom tools variant |
+| `google/gemini-3.1-flash-lite` | Gemini 3.1 Flash Lite | 1,048,576 | 65,536 | Efficient |
+| `google/gemini-3.1-flash-lite-preview` | Gemini 3.1 Flash Lite Preview | 1,048,576 | 65,536 | Preview |
+| `google/gemini-3-flash-preview` | Gemini 3 Flash Preview | 1,048,576 | 65,535 | Preview |
+| `google/gemini-2.5-pro` | Gemini 2.5 Pro | 1,048,576 | 65,536 | Stable Pro |
+| `google/gemini-2.5-pro-preview` | Gemini 2.5 Pro Preview 06-05 | 1,048,576 | 65,536 | Pro preview |
+| `google/gemini-2.5-pro-preview-05-06` | Gemini 2.5 Pro Preview 05-06 | 1,048,576 | 65,535 | Older Pro preview |
+| `google/gemini-2.5-flash` | Gemini 2.5 Flash | 1,048,576 | 65,535 | Stable Flash |
+| `google/gemini-2.5-flash-lite` | Gemini 2.5 Flash Lite | 1,048,576 | 65,535 | Stable light model |
+| `google/gemini-2.5-flash-lite-preview-09-2025` | Gemini 2.5 Flash Lite Preview 09-2025 | 1,048,576 | 65,535 | Older preview |
 
 Google image/audio:
 
-| Natural language | Slug | Notes |
-|---|---|---|
-| Nano Banana Pro | `google/gemini-3-pro-image-preview` | Highest-quality Gemini image |
-| Nano Banana 2 | `google/gemini-3.1-flash-image-preview` | New flash image |
-| Nano Banana | `google/gemini-2.5-flash-image` | Stable image |
-| Gemini Flash TTS | `google/gemini-3.1-flash-tts-preview` | TTS endpoint |
+| Natural language | Slug | Context | Max output | Notes |
+|---|---|---:|---:|---|
+| Nano Banana Pro | `google/gemini-3-pro-image` | 65,536 | 32,768 | Stable Gemini 3 Pro image |
+| Nano Banana Pro Preview | `google/gemini-3-pro-image-preview` | 65,536 | 32,768 | Preview Gemini Pro image |
+| Nano Banana 2 | `google/gemini-3.1-flash-image` | 131,072 | 32,768 | Stable Gemini 3.1 Flash image |
+| Nano Banana 2 Preview | `google/gemini-3.1-flash-image-preview` | 131,072 | 32,768 | Preview Gemini Flash image |
+| Nano Banana 2 Lite | `google/gemini-3.1-flash-lite-image` | 65,536 | 66,000 | Efficient image |
+| Nano Banana | `google/gemini-2.5-flash-image` | 32,768 | 32,768 | Stable image |
+| Lyria 3 Pro Preview | `google/lyria-3-pro-preview` | 1,048,576 | 65,536 | Full-length music/audio generation; text+image to text+audio |
+| Lyria 3 Clip Preview | `google/lyria-3-clip-preview` | 1,048,576 | 65,536 | Short music clips/loops; text+image to text+audio |
+| Gemini Flash TTS | `google/gemini-3.1-flash-tts-preview` | n/a | n/a | Static TTS fallback if exposed by media endpoint; not in supplied `/models` list |
 
 ---
 
@@ -176,77 +215,135 @@ Google image/audio:
 |---|---|---:|---|
 | `meta-llama/llama-4-maverick` | Llama 4 Maverick | 1M | Flagship Llama 4 |
 | `meta-llama/llama-4-scout` | Llama 4 Scout | 10M | Very large context |
+| `meta-llama/llama-guard-4-12b` | Llama Guard 4 12B | 163K | Safety/guardrail, vision-capable |
 | `meta-llama/llama-3.3-70b-instruct` | Llama 3.3 70B Instruct | 131K | Common open model |
 | `meta-llama/llama-3.3-70b-instruct:free` | Llama 3.3 70B Instruct Free | 131K | Free variant |
+| `meta-llama/llama-3.2-11b-vision-instruct` | Llama 3.2 11B Vision Instruct | 131K | Vision-capable |
+| `meta-llama/llama-3.2-3b-instruct` | Llama 3.2 3B Instruct | 131K | Small |
+| `meta-llama/llama-3.2-3b-instruct:free` | Llama 3.2 3B Instruct Free | 131K | Free variant |
+| `meta-llama/llama-3.1-70b-instruct` | Llama 3.1 70B Instruct | 131K | Older |
+| `meta-llama/llama-3.1-8b-instruct` | Llama 3.1 8B Instruct | 131K | Older |
+| `meta-llama/llama-3-8b-instruct` | Llama 3 8B Instruct | 8K | Legacy |
 
 ---
 
 ## 10. DeepSeek
 
-| Slug | Display name | Context | Notes |
-|---|---|---:|---|
-| `deepseek/deepseek-r1-0528` | R1 0528 | 163K | Preferred R1 dated version |
-| `deepseek/deepseek-r1` | R1 | 163K | Base alias |
-| `deepseek/deepseek-v4-pro` | DeepSeek V4 Pro | 1M | Latest V4 pro |
-| `deepseek/deepseek-v4-flash` | DeepSeek V4 Flash | 1M | Fast V4 |
-| `deepseek/deepseek-v4-flash:free` | DeepSeek V4 Flash Free | 1M | Free variant |
-| `deepseek/deepseek-v3.2` | DeepSeek V3.2 | 131K | V3 chat |
-| `deepseek/deepseek-v3.2-exp` | DeepSeek V3.2 Exp | 163K | Experimental |
+| Slug | Display name | Context | Max output | Notes |
+|---|---|---:|---:|---|
+| `deepseek/deepseek-v4-pro` | DeepSeek V4 Pro | 1,048,576 | 384,000 | Latest V4 pro; long-context reasoning/coding |
+| `deepseek/deepseek-v4-flash` | DeepSeek V4 Flash | 1,048,576 | 0 | Fast V4; no `:free` variant in supplied live list |
+| `deepseek/deepseek-v3.2` | DeepSeek V3.2 | 131,072 | 64,000 | V3.2 chat/reasoning |
+| `deepseek/deepseek-v3.2-exp` | DeepSeek V3.2 Exp | 163,840 | 65,536 | Experimental |
+| `deepseek/deepseek-v3.1-terminus` | DeepSeek V3.1 Terminus | 163,840 | 32,768 | V3.1 terminus |
+| `deepseek/deepseek-chat-v3.1` | DeepSeek V3.1 | 163,840 | 32,768 | V3.1 chat |
+| `deepseek/deepseek-chat-v3-0324` | DeepSeek V3 0324 | 163,840 | 16,384 | Dated V3 |
+| `deepseek/deepseek-chat` | DeepSeek V3 | 131,072 | 16,000 | Base V3 alias |
+| `deepseek/deepseek-r1-0528` | R1 0528 | 163,840 | 32,768 | Preferred R1 dated version |
+| `deepseek/deepseek-r1` | R1 | 163,840 | 16,000 | Base alias |
+| `deepseek/deepseek-r1-distill-llama-70b` | R1 Distill Llama 70B | 128,000 | 8,192 | Distilled open model |
 
 ---
 
 ## 11. MoonshotAI Kimi
 
-| Slug | Display name | Context | Notes |
-|---|---|---:|---|
-| `moonshotai/kimi-k2.6` | Kimi K2.6 | 262K | Latest K2 |
-| `moonshotai/kimi-k2.6:free` | Kimi K2.6 Free | 262K | Free variant |
-| `moonshotai/kimi-k2.5` | Kimi K2.5 | 262K | Previous |
-| `moonshotai/kimi-k2-thinking` | Kimi K2 Thinking | 262K | Thinking model |
-| `moonshotai/kimi-k2-0905` | Kimi K2 0905 | 262K | Dated |
-| `moonshotai/kimi-k2` | Kimi K2 0711 | 131K | Older |
+| Slug | Display name | Context | Max output | Notes |
+|---|---|---:|---:|---|
+| `moonshotai/kimi-k2.7-code` | Kimi K2.7 Code | 262,144 | 16,384 | Latest coding-focused Kimi K2 variant |
+| `moonshotai/kimi-k2.6` | Kimi K2.6 | 262,144 | 262,144 | Latest general K2 in supplied list |
+| `moonshotai/kimi-k2.5` | Kimi K2.5 | 262,144 | 0 | Previous multimodal K2 |
+| `moonshotai/kimi-k2-thinking` | Kimi K2 Thinking | 262,144 | 100,352 | Thinking model |
+| `moonshotai/kimi-k2-0905` | Kimi K2 0905 | 262,144 | 100,352 | Dated |
+| `moonshotai/kimi-k2` | Kimi K2 0711 | 131,072 | 100,352 | Older |
+| `~moonshotai/kimi-latest` | Kimi Latest | 262,144 | 262,144 | Latest alias |
 
 Recommended for “kimi k2”: `moonshotai/kimi-k2.6`.
+
+Recommended for “kimi code” or “kimi k2.7”: `moonshotai/kimi-k2.7-code`.
+
+Recommended for moving latest Kimi target: `~moonshotai/kimi-latest`.
 
 ---
 
 ## 12. Mistral
 
-| Slug | Display name | Context | Notes |
-|---|---|---:|---|
-| `mistralai/mistral-large-2512` | Mistral Large 3 2512 | 262K | Latest Large |
-| `mistralai/mistral-medium-3-5` | Mistral Medium 3.5 | 262K | Slug uses `3-5` |
-| `mistralai/mistral-medium-3.1` | Mistral Medium 3.1 | 131K | Previous medium |
-| `mistralai/mistral-small-2603` | Mistral Small 4 | 262K | Latest Small |
-| `mistralai/mistral-small-3.2-24b-instruct` | Mistral Small 3.2 24B | 128K | Small instruct |
-| `mistralai/devstral-medium` | Devstral Medium | 131K | Code/dev specialist |
-| `mistralai/devstral-2512` | Devstral 2 2512 | 262K | New Devstral |
+| Slug | Display name | Context | Max output | Notes |
+|---|---|---:|---:|---|
+| `mistralai/mistral-large-2512` | Mistral Large 3 2512 | 262,144 | 0 | Latest Large |
+| `mistralai/mistral-large` | Mistral Large | 128,000 | 0 | Base large alias |
+| `mistralai/mistral-large-2407` | Mistral Large 2407 | 131,072 | 0 | Older dated large |
+| `mistralai/mistral-medium-3-5` | Mistral Medium 3.5 | 262,144 | 0 | Slug uses `3-5` |
+| `mistralai/mistral-medium-3.1` | Mistral Medium 3.1 | 131,072 | 0 | Previous medium |
+| `mistralai/mistral-medium-3` | Mistral Medium 3 | 131,072 | 0 | Older medium |
+| `mistralai/mistral-small-2603` | Mistral Small 4 | 262,144 | 0 | Latest Small |
+| `mistralai/mistral-small-3.2-24b-instruct` | Mistral Small 3.2 24B | 128,000 | 16,384 | Small instruct |
+| `mistralai/mistral-small-3.1-24b-instruct` | Mistral Small 3.1 24B | 128,000 | 128,000 | Previous small instruct |
+| `mistralai/mistral-small-24b-instruct-2501` | Mistral Small 3 | 32,768 | 16,384 | Older small |
+| `mistralai/devstral-2512` | Devstral 2 2512 | 262,144 | 0 | Agentic coding/dev specialist |
+| `mistralai/codestral-2508` | Codestral 2508 | 256,000 | 0 | Code/FIM/correction/test generation |
+| `mistralai/voxtral-small-24b-2507` | Voxtral Small 24B 2507 | 32,000 | 0 | Audio input speech transcription/translation/understanding |
+| `mistralai/ministral-14b-2512` | Ministral 3 14B 2512 | 262,144 | 0 | Small vision-capable Mistral |
+| `mistralai/ministral-8b-2512` | Ministral 3 8B 2512 | 262,144 | 0 | Small vision-capable Mistral |
+| `mistralai/ministral-3b-2512` | Ministral 3 3B 2512 | 131,072 | 0 | Small vision-capable Mistral |
+| `mistralai/mistral-nemo` | Mistral Nemo | 131,072 | 0 | Efficient open model |
+| `mistralai/mistral-saba` | Saba | 32,768 | 0 | Regional/language specialist |
+| `mistralai/mixtral-8x22b-instruct` | Mixtral 8x22B Instruct | 65,536 | 0 | Legacy MoE |
+| `mistralai/devstral-medium` | Devstral Medium | 131K | n/a | Historical/static fallback only; prefer live `mistralai/devstral-2512` |
 
 ---
 
 ## 13. xAI / Grok
 
-| Slug | Display name | Context | Notes |
-|---|---|---:|---|
-| `x-ai/grok-4.3` | Grok 4.3 | 1M | Current Grok |
-| `x-ai/grok-4.20` | Grok 4.20 | 2M | Large context |
-| `x-ai/grok-4.20-multi-agent` | Grok 4.20 Multi-Agent | 2M | Multi-agent variant |
-| `x-ai/grok-build-0.1` | Grok Build 0.1 | 256K | Build/coding oriented |
+| Slug | Display name | Context | Max output | Notes |
+|---|---|---:|---:|---|
+| `x-ai/grok-4.3` | Grok 4.3 | 1,000,000 | 0 | Current Grok 4.3 reasoning/chat |
+| `x-ai/grok-4.20` | Grok 4.20 | 2,000,000 | 0 | Large-context Grok 4.20 |
+| `x-ai/grok-4.20-multi-agent` | Grok 4.20 Multi-Agent | 2,000,000 | 0 | Multi-agent research/workflow variant |
+| `x-ai/grok-build-0.1` | Grok Build 0.1 | 256,000 | 0 | Build/coding oriented |
 
 ---
 
 ## 14. Qwen and routers
 
-| Slug | Display name | Context | Notes |
-|---|---|---:|---|
-| `qwen/qwen3.7-max` | Qwen3.7 Max | 1M | Latest Max |
-| `qwen/qwen3.6-flash` | Qwen3.6 Flash | 1M | Fast |
-| `qwen/qwen3.6-plus` | Qwen3.6 Plus | 1M | Plus |
-| `qwen/qwen3-coder` | Qwen3 Coder | 1M | Coder |
-| `qwen/qwen3-coder:free` | Qwen3 Coder Free | 1M | Free variant |
-| `openrouter/auto` | Auto Router | 2M | Let OpenRouter choose |
-| `openrouter/free` | Free Models Router | 200K | Free router |
-| `openrouter/pareto-code` | Pareto Code Router | 2M | Code router |
+| Slug | Display name | Context | Max output | Notes |
+|---|---|---:|---:|---|
+| `qwen/qwen3.7-max` | Qwen3.7 Max | 1,000,000 | 65,536 | Latest Max, text-only |
+| `qwen/qwen3.7-plus` | Qwen3.7 Plus | 1,000,000 | 65,536 | Latest Plus, text+image |
+| `qwen/qwen3.6-max-preview` | Qwen3.6 Max Preview | 262,144 | 65,536 | Previous Max preview |
+| `qwen/qwen3.6-plus` | Qwen3.6 Plus | 1,000,000 | 65,536 | Multimodal Plus |
+| `qwen/qwen3.6-flash` | Qwen3.6 Flash | 1,000,000 | 65,536 | Fast multimodal |
+| `qwen/qwen3.6-35b-a3b` | Qwen3.6 35B A3B | 262,144 | 262,144 | Open/efficient multimodal |
+| `qwen/qwen3.6-27b` | Qwen3.6 27B | 262,144 | 262,140 | Open/efficient multimodal |
+| `qwen/qwen3.5-plus-20260420` | Qwen3.5 Plus 2026-04-20 | 1,000,000 | 65,536 | Previous Plus dated |
+| `qwen/qwen3.5-plus-02-15` | Qwen3.5 Plus 2026-02-15 | 1,000,000 | 65,536 | Previous Plus dated |
+| `qwen/qwen3.5-flash-02-23` | Qwen3.5 Flash | 1,000,000 | 65,536 | Previous Flash |
+| `qwen/qwen3.5-397b-a17b` | Qwen3.5 397B A17B | 256,000 | 0 | Large multimodal |
+| `qwen/qwen3.5-122b-a10b` | Qwen3.5 122B A10B | 262,144 | 262,144 | Large multimodal |
+| `qwen/qwen3.5-35b-a3b` | Qwen3.5 35B A3B | 262,144 | 81,920 | Efficient multimodal |
+| `qwen/qwen3.5-27b` | Qwen3.5 27B | 262,144 | 65,536 | Multimodal |
+| `qwen/qwen3.5-9b` | Qwen3.5 9B | 262,144 | 262,144 | Small multimodal |
+| `qwen/qwen3-max` | Qwen3 Max | 262,144 | 32,768 | Earlier Max |
+| `qwen/qwen3-max-thinking` | Qwen3 Max Thinking | 262,144 | 32,768 | Earlier Max reasoning |
+| `qwen/qwen3-coder` | Qwen3 Coder 480B A35B | 1,048,576 | 65,536 | Coder |
+| `qwen/qwen3-coder:free` | Qwen3 Coder 480B A35B Free | 1,048,576 | 262,000 | Free variant |
+| `qwen/qwen3-coder-plus` | Qwen3 Coder Plus | 1,000,000 | 65,536 | Coder Plus |
+| `qwen/qwen3-coder-flash` | Qwen3 Coder Flash | 1,000,000 | 65,536 | Fast coder |
+| `qwen/qwen3-coder-next` | Qwen3 Coder Next | 262,144 | 262,144 | Next coder |
+| `qwen/qwen3-coder-30b-a3b-instruct` | Qwen3 Coder 30B A3B Instruct | 160,000 | 32,768 | Smaller coder |
+| `qwen/qwen3-vl-235b-a22b-instruct` | Qwen3 VL 235B A22B Instruct | 262,144 | 16,384 | Vision-language |
+| `qwen/qwen3-vl-235b-a22b-thinking` | Qwen3 VL 235B A22B Thinking | 131,072 | 32,768 | Vision-language reasoning |
+| `qwen/qwen3-vl-30b-a3b-instruct` | Qwen3 VL 30B A3B Instruct | 262,144 | 32,768 | Vision-language |
+| `qwen/qwen3-vl-30b-a3b-thinking` | Qwen3 VL 30B A3B Thinking | 131,072 | 32,768 | Vision-language reasoning |
+| `qwen/qwen3-vl-32b-instruct` | Qwen3 VL 32B Instruct | 262,144 | 32,768 | Vision-language |
+| `qwen/qwen3-vl-8b-instruct` | Qwen3 VL 8B Instruct | 256,000 | 32,768 | Vision-language |
+| `qwen/qwen3-vl-8b-thinking` | Qwen3 VL 8B Thinking | 256,000 | 32,768 | Vision-language reasoning |
+| `qwen/qwen-plus` | Qwen Plus | 1,000,000 | 32,768 | Plus alias |
+| `qwen/qwen-plus-2025-07-28` | Qwen Plus 0728 | 1,000,000 | 32,768 | Dated |
+| `qwen/qwen-plus-2025-07-28:thinking` | Qwen Plus 0728 Thinking | 1,000,000 | 32,768 | Dated thinking |
+| `openrouter/auto` | Auto Router | 2,000,000 | 0 | Let OpenRouter choose |
+| `openrouter/free` | Free Models Router | 200,000 | 0 | Free router |
+| `openrouter/fusion` | Fusion Router | 1,000,000 | 0 | Multi-model synthesis |
+| `openrouter/pareto-code` | Pareto Code Router | 2,000,000 | 0 | Code router |
 
 Use routers only when user explicitly wants automatic routing.
 
@@ -259,8 +356,10 @@ Use routers only when user explicitly wants automatic routing.
 | Task | Endpoint | Notes |
 |---|---|---|
 | Image | `/api/v1/chat/completions` | Use `modalities: ["image", "text"]` when supported |
+| Music / audio generation | `/api/v1/chat/completions` | Lyria models return `text+audio` from text/image prompts when supported |
 | Video | `/api/v1/videos` | Async submit+poll |
 | TTS | `/api/v1/audio/speech` | Raw audio response |
+| Audio understanding / speech transcription | `/api/v1/chat/completions` | Use audio input content parts when supported |
 
 ### Image models
 
@@ -269,10 +368,20 @@ Use routers only when user explicitly wants automatic routing.
 | `openai/gpt-5.4-image-2` | GPT-5.4 Image 2 | Top OpenAI image model |
 | `openai/gpt-5-image` | GPT-5 Image | Image model |
 | `openai/gpt-5-image-mini` | GPT-5 Image Mini | Efficient image model |
-| `google/gemini-3-pro-image-preview` | Nano Banana Pro | Gemini Pro image |
-| `google/gemini-3.1-flash-image-preview` | Nano Banana 2 | Gemini Flash image |
+| `google/gemini-3-pro-image` | Nano Banana Pro | Stable Gemini Pro image |
+| `google/gemini-3-pro-image-preview` | Nano Banana Pro Preview | Gemini Pro image preview |
+| `google/gemini-3.1-flash-image` | Nano Banana 2 | Stable Gemini Flash image |
+| `google/gemini-3.1-flash-image-preview` | Nano Banana 2 Preview | Gemini Flash image preview |
+| `google/gemini-3.1-flash-lite-image` | Nano Banana 2 Lite | Efficient image model |
 | `google/gemini-2.5-flash-image` | Nano Banana | Stable Gemini image |
-| `bytedance-seed/seedream-4.5` | Seedream 4.5 | Portrait/composition image model |
+| `bytedance-seed/seedream-4.5` | Seedream 4.5 | Portrait/composition image model; static media fallback if not in `/models` |
+
+### Music / audio generation models
+
+| Slug | Display name | Context | Max output | Notes |
+|---|---|---:|---:|---|
+| `google/lyria-3-pro-preview` | Lyria 3 Pro Preview | 1,048,576 | 65,536 | Full-length music/song generation; text+image input, text+audio output |
+| `google/lyria-3-clip-preview` | Lyria 3 Clip Preview | 1,048,576 | 65,536 | Short clips/loops/previews; text+image input, text+audio output |
 
 ### Video models
 
@@ -285,13 +394,14 @@ Use routers only when user explicitly wants automatic routing.
 
 Video models may not appear in `/api/v1/models`; resolver includes static media fallbacks.
 
-### Speech / TTS models
+### Speech / audio-input models
 
 | Slug | Display name | Notes |
 |---|---|---|
-| `google/gemini-3.1-flash-tts-preview` | Gemini 3.1 Flash TTS Preview | TTS endpoint |
-| `openai/gpt-audio` | GPT Audio | Audio/speech |
-| `openai/gpt-audio-mini` | GPT Audio Mini | Efficient audio/speech |
+| `mistralai/voxtral-small-24b-2507` | Voxtral Small 24B 2507 | Speech transcription, translation, and audio understanding; audio input, text output |
+| `openai/gpt-audio` | GPT Audio | Audio/speech input and output |
+| `openai/gpt-audio-mini` | GPT Audio Mini | Efficient audio/speech input and output |
+| `google/gemini-3.1-flash-tts-preview` | Gemini 3.1 Flash TTS Preview | Static TTS endpoint fallback if exposed outside `/models` |
 
 ---
 
@@ -325,30 +435,3 @@ Server tools are passed in the `tools` array with `type` strings. OpenRouter exe
 
 ### Enabling server tools
 
-```python
-data["tools"] = [
-    {"type": "openrouter:web_search"},                          # basic
-    {"type": "openrouter:fusion"},                              # basic
-    {"type": "openrouter:advisor", "parameters": {             # with params
-        "model": "~anthropic/claude-opus-latest",
-        "tools": [{"type": "openrouter:web_search"}]
-    }},
-    {"type": "openrouter:subagent", "parameters": {            # with params
-        "model": "~anthropic/claude-haiku-latest",
-        "tools": [{"type": "openrouter:web_search"}]
-    }},
-]
-```
-
-### Workflow combinations
-
-| Goal | Tools combination |
-|---|---|
-| Grounded research answer | `web_search` |
-| Multi-perspective analysis | `fusion` (already includes `web_search` + `web_fetch` on panel) |
-| Cheap model + expert guidance | `advisor` with strong advisor model |
-| Parallel subtask delegation | `subagent` with fast worker model |
-| Research + expert review | `web_search` + `advisor` |
-| Many research subtasks | `subagent` with nested `web_search` |
-
-See SKILL.md states S10-S13 for full Python templates and parameter tables.
