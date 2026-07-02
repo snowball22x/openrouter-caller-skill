@@ -258,6 +258,14 @@ def build_reasoning_payload(model: str, tier: Optional[str], max_tokens: int) ->
         mapped = "xhigh" if tier == "max" else tier
         return {"reasoning": {"effort": mapped}}
 
+    # Sakana Fugu Ultra: supports reasoning.effort (same OpenRouter standard format)
+    if provider == "sakana" and tail.startswith("fugu"):
+        return {"reasoning": {"effort": effort_low_medium_high(tier)}}
+
+    # Z.AI GLM 5.x: supports reasoning.effort (low/medium/high); GLM 4.x does not
+    if provider == "z-ai" and re.match(r"glm-5", tail):
+        return {"reasoning": {"effort": effort_low_medium_high(tier)}}
+
     return {}
 
 

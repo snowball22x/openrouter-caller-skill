@@ -729,6 +729,27 @@ def canonical(text: str) -> str:
     return re.sub(r"[^a-z0-9]", "", text.lower())
 
 # Known-not-live stubs (deprecated slugs with helpful redirect messages)
+# Confirmed-valid slugs served via media endpoints (not in /api/v1/models)
+# These are real OpenRouter slugs but use /api/v1/images, /api/v1/videos, /api/v1/audio/speech
+KNOWN_MEDIA_SLUGS: Dict[str, str] = {
+    "openai/gpt-image-2": "images",
+    "openai/gpt-image-1": "images",
+    "openai/gpt-image-1-mini": "images",
+    "openai/gpt-5.4-image-2": "chat",  # hybrid: chat completions with image output
+    "google/gemini-3-pro-image": "chat",
+    "google/gemini-3-pro-image-preview": "chat",
+    "google/gemini-3.1-flash-image": "chat",
+    "google/gemini-3.1-flash-image-preview": "chat",
+    "google/gemini-3.1-flash-lite-image": "chat",
+    "google/gemini-2.5-flash-image": "chat",
+    "bytedance-seed/seedream-4.5": "images",
+    "google/veo-3.1": "videos",
+    "google/veo-3.1-fast": "videos",
+    "bytedance/seedance-2.0": "videos",
+    "bytedance/seedance-2.0-fast": "videos",
+    "google/gemini-3.1-flash-tts-preview": "audio/speech",
+}
+
 KNOWN_NOT_LIVE_RAW: Dict[str, str] = {
     "anthropic/claude-sonnet-latest": "Use ~anthropic/claude-sonnet-latest (tilde prefix required)",
     "anthropic/claude-opus-latest": "Use ~anthropic/claude-opus-latest (tilde prefix required)",
@@ -1055,6 +1076,13 @@ def resolve(query: str, models: List[Dict[str, Any]], meta: Dict[str, Any], top_
         if full in ids or (base in ids and (suffix in KNOWN_SUFFIXES or suffix is None)):
             m = find_model(full, models) or find_model(base, models) or {"id": full, "name": full}
             return {"status": "OK", "resolution": "validated_slug", "use_slug": full, "model": m, "warnings": []}
+
+        # Check if it's a confirmed media-endpoint slug (not in /models but still valid)
+        if base in KNOWN_MEDIA_SLUGS:
+            endpoint = KNOWN_MEDIA_SLUGS[base]
+            m = {"id": full, "name": full}
+            warnings = [f"Media-endpoint model: use /api/v1/{endpoint} (not /api/v1/chat/completions)."]
+            return {"status": "OK", "resolution": "known_media_slug", "use_slug": full, "model": m, "endpoint_hint": endpoint, "warnings": warnings}
 
         if not base.startswith("~") and base.endswith("-latest") and ("~" + base) in ids:
             corrected = apply_suffix("~" + base, suffix)
