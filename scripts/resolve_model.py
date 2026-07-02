@@ -677,6 +677,20 @@ CURATED_ALIASES: Dict[str, str] = {
     "laguna m.1": "poolside/laguna-m.1",
     "laguna xs2": "poolside/laguna-xs.2",
     "laguna xs.2": "poolside/laguna-xs.2",
+    "fugu ultra": "sakana/fugu-ultra",
+    "sakana fugu ultra": "sakana/fugu-ultra",
+    "fugu": "sakana/fugu-ultra",
+    "sakana fugu": "sakana/fugu-ultra",
+    "step 3.7 flash": "stepfun/step-3.7-flash",
+    "stepfun 3.7 flash": "stepfun/step-3.7-flash",
+    "step 3.5 flash": "stepfun/step-3.5-flash",
+    "stepfun 3.5 flash": "stepfun/step-3.5-flash",
+    "bodybuilder": "openrouter/bodybuilder",
+    "openrouter bodybuilder": "openrouter/bodybuilder",
+    # gpt-image-2: served via media endpoint, not in /models, but slug is valid
+    "gpt image 2": "openai/gpt-image-2",
+    "openai gpt image 2": "openai/gpt-image-2",
+    "gpt-image-2": "openai/gpt-image-2",
 }
 
 TILDE_MODELS: List[str] = [

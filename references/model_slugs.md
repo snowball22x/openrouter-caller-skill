@@ -341,15 +341,87 @@ Recommended for moving latest Kimi target: `~moonshotai/kimi-latest`.
 | `qwen/qwen-plus-2025-07-28` | Qwen Plus 0728 | 1,000,000 | 32,768 | Dated |
 | `qwen/qwen-plus-2025-07-28:thinking` | Qwen Plus 0728 Thinking | 1,000,000 | 32,768 | Dated thinking |
 | `openrouter/auto` | Auto Router | 2,000,000 | 0 | Let OpenRouter choose |
-| `openrouter/free` | Free Models Router | 200,000 | 0 | Free router |
-| `openrouter/fusion` | Fusion Router | 1,000,000 | 0 | Multi-model synthesis |
-| `openrouter/pareto-code` | Pareto Code Router | 2,000,000 | 0 | Code router |
+| `openrouter/bodybuilder` | Body Builder (beta) | 128,000 | 0 | Optimized for physical/fitness domain tasks |
 
 Use routers only when user explicitly wants automatic routing.
 
 ---
 
-## 15. Multimodal generation
+## 15a. Sakana AI
+
+| Slug | Display name | Context | Max output | Notes |
+|---|---|---:|---:|---|
+| `sakana/fugu-ultra` | Fugu Ultra | 1,000,000 | 128,000 | Flagship Sakana model; text+image input; strong reasoning |
+
+---
+
+## 15b. Z.AI / Zhipu (GLM)
+
+| Slug | Display name | Context | Max output | Notes |
+|---|---|---:|---:|---|
+| `z-ai/glm-5.2` | GLM 5.2 | 1,048,576 | 32,768 | Latest GLM 5.x; 1M context |
+| `z-ai/glm-5.1` | GLM 5.1 | 202,752 | 0 | GLM 5.1 |
+| `z-ai/glm-5` | GLM 5 | 202,752 | 0 | GLM 5 base |
+| `z-ai/glm-5-turbo` | GLM 5 Turbo | 262,144 | 131,072 | Fast GLM 5 |
+| `z-ai/glm-5v-turbo` | GLM 5V Turbo | 202,752 | 131,072 | Vision+video input |
+| `z-ai/glm-4.7` | GLM 4.7 | 202,752 | 131,072 | GLM 4.7 |
+| `z-ai/glm-4.7-flash` | GLM 4.7 Flash | 202,752 | 16,384 | Fast GLM 4.7 |
+| `z-ai/glm-4.6` | GLM 4.6 | 202,752 | 131,072 | GLM 4.6 |
+| `z-ai/glm-4.6v` | GLM 4.6V | 131,072 | 32,768 | Vision+video input |
+| `z-ai/glm-4.5` | GLM 4.5 | 131,072 | 98,304 | GLM 4.5 |
+| `z-ai/glm-4.5-air` | GLM 4.5 Air | 131,072 | 98,304 | Efficient GLM 4.5 |
+| `z-ai/glm-4.5v` | GLM 4.5V | 65,536 | 16,384 | Vision input |
+
+Reasoning: GLM 5.x supports `reasoning.effort` (low/medium/high); GLM 4.x does not support reasoning params — omit.
+
+---
+
+## 15c. NVIDIA Nemotron
+
+| Slug | Display name | Context | Max output | Notes |
+|---|---|---:|---:|---|
+| `nvidia/nemotron-3-ultra-550b-a55b` | Nemotron 3 Ultra | 1,000,000 | 16,384 | Flagship 550B MoE; free variant available |
+| `nvidia/nemotron-3-ultra-550b-a55b:free` | Nemotron 3 Ultra Free | 1,000,000 | 16,384 | Free tier |
+| `nvidia/nemotron-3-super-120b-a12b` | Nemotron 3 Super | 1,000,000 | 16,384 | 120B MoE; free variant available |
+| `nvidia/nemotron-3-super-120b-a12b:free` | Nemotron 3 Super Free | 1,000,000 | 16,384 | Free tier |
+
+Reasoning: Nemotron does not expose reasoning params — omit.
+
+---
+
+## 15d. Other Notable Models
+
+| Slug | Display name | Context | Max output | Notes |
+|---|---|---:|---:|---|
+| `nousresearch/hermes-4-405b` | Hermes 4 405B | 131,072 | 0 | Flagship Hermes 4; strong instruction following |
+| `nousresearch/hermes-4-70b` | Hermes 4 70B | 131,072 | 0 | Efficient Hermes 4 |
+| `poolside/laguna-m.1` | Laguna M.1 | 262,144 | 32,768 | Poolside coding model; free variant available |
+| `poolside/laguna-m.1:free` | Laguna M.1 Free | 262,144 | 32,768 | Free tier |
+| `poolside/laguna-xs.2` | Laguna XS.2 | 262,144 | 32,768 | Smaller Poolside model; free variant available |
+| `writer/palmyra-x5` | Palmyra X5 | 1,040,000 | 8,192 | Writer flagship; enterprise/long-doc |
+| `upstage/solar-pro-3` | Solar Pro 3 | 128,000 | 0 | Upstage flagship |
+| `stepfun/step-3.7-flash` | Step 3.7 Flash | 256,000 | 256,000 | StepFun multimodal (text+image+video input); 256K output |
+| `stepfun/step-3.5-flash` | Step 3.5 Flash | 262,144 | 65,536 | StepFun text model |
+| `openrouter/pareto-code` | Pareto Code Router | 2,000,000 | 0 | OpenRouter code-optimized router |
+
+Reasoning: None of the above expose reasoning params — omit for all.
+
+---
+
+## 15e. Qwen3 Coder & VL additions
+
+| Slug | Display name | Context | Max output | Notes |
+|---|---|---:|---:|---|
+| `qwen/qwen3-coder-next` | Qwen3 Coder Next | 262,144 | 262,144 | Next-gen coder; 262K output |
+| `qwen/qwen3-30b-a3b-instruct-2507` | Qwen3 30B A3B Instruct 2507 | 131,072 | 32,000 | Dated instruct |
+| `qwen/qwen3-30b-a3b-thinking-2507` | Qwen3 30B A3B Thinking 2507 | 131,072 | 32,768 | Dated thinking |
+| `qwen/qwen3-235b-a22b-2507` | Qwen3 235B A22B Instruct 2507 | 262,144 | 16,384 | Dated instruct |
+| `qwen/qwen3-235b-a22b-thinking-2507` | Qwen3 235B A22B Thinking 2507 | 262,144 | 0 | Dated thinking |
+| `qwen/qwen3-vl-8b-thinking` | Qwen3 VL 8B Thinking | 256,000 | 32,768 | Small VL reasoning |
+
+---
+
+## 16. Multimodal generation
 
 ### Endpoint map
 
@@ -365,6 +437,7 @@ Use routers only when user explicitly wants automatic routing.
 
 | Slug | Display name | Notes |
 |---|---|---|
+| `openai/gpt-image-2` | GPT Image 2 | Canonical OpenAI image generation model; served via media endpoint, may not appear in `/models` |
 | `openai/gpt-5.4-image-2` | GPT-5.4 Image 2 | Top OpenAI image model |
 | `openai/gpt-5-image` | GPT-5 Image | Image model |
 | `openai/gpt-5-image-mini` | GPT-5 Image Mini | Efficient image model |
@@ -405,7 +478,7 @@ Video models may not appear in `/api/v1/models`; resolver includes static media 
 
 ---
 
-## 16. Minimal call checklist
+## 17. Minimal call checklist
 
 1. Resolve:
    ```bash
@@ -418,7 +491,7 @@ Video models may not appear in `/api/v1/models`; resolver includes static media 
 6. Check `finish_reason`.
 7. Check `result["model"]` for unexpected fallback/routing.
 
-## Server Tools Reference
+## 18. Server Tools Reference
 
 Server tools are passed in the `tools` array with `type` strings. OpenRouter executes them server-side.
 
