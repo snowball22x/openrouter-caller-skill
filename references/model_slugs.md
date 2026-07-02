@@ -1,89 +1,64 @@
 # OpenRouter Model Slug Quick Reference
 
-This file is a curated quick-reference for June 2026-era live models and common media/server-tool usage. The resolver is authoritative.
+## 1. Resolver Contract
 
-    python3.11 /home/ubuntu/skills/openrouter-caller/scripts/resolve_model.py "claude sonnet 4.6"
-    python3.11 /home/ubuntu/skills/openrouter-caller/scripts/resolve_model.py --list
-    python3.11 /home/ubuntu/skills/openrouter-caller/scripts/resolve_model.py --list anthropic
-    python3.11 /home/ubuntu/skills/openrouter-caller/scripts/resolve_model.py --list "~"
-    python3.11 /home/ubuntu/skills/openrouter-caller/scripts/resolve_model.py --refresh
+| resolver output | action |
+|---|---|
+| `STATUS=OK` | use `USE_SLUG` exactly |
+| `STATUS=UNVERIFIED` | use only for exact-looking user slug when live validation unavailable |
+| `STATUS=AMBIGUOUS` | do not call; ask user or inspect candidates |
+| `STATUS=ERROR` | do not call |
 
----
+| command | purpose |
+|---|---|
+| `python3.11 /home/ubuntu/skills/openrouter-caller/scripts/resolve_model.py "MODEL REQUEST"` | resolve any model text |
+| `python3.11 /home/ubuntu/skills/openrouter-caller/scripts/resolve_model.py --list` | list full live/cache/static set |
+| `python3.11 /home/ubuntu/skills/openrouter-caller/scripts/resolve_model.py --list anthropic` | provider filter |
+| `python3.11 /home/ubuntu/skills/openrouter-caller/scripts/resolve_model.py --list "~"` | latest aliases |
+| `python3.11 /home/ubuntu/skills/openrouter-caller/scripts/resolve_model.py --refresh` | refresh live model cache |
 
-## 1. Resolver contract
+## 2. Slug Format
 
-Use the resolver before every call.
+| format | example |
+|---|---|
+| exact | `anthropic/claude-sonnet-5` |
+| exact + suffix | `openai/gpt-5.5:exacto` |
+| tilde latest alias | `~anthropic/claude-sonnet-latest` |
+| tilde + suffix | `~openai/gpt-latest:nitro` |
 
-| Resolver output | Meaning | Action |
+## 3. Suffixes
+
+| suffix | effect |
+|---|---|
+| `:nitro` | fastest provider routing |
+| `:floor` | cheapest provider routing |
+| `:free` | free-tier providers only |
+| `:thinking` | reasoning/thinking routing when supported |
+| `:extended` | extended-context routing when supported |
+| `:exacto` | quality-first routing for reliability/tool use |
+| `:online` | deprecated; prefer `openrouter:web_search` |
+
+## 4. Common Confusions
+
+| user says | correct action | avoid |
 |---|---|---|
-| `STATUS=OK` | Resolved/validated | Use `USE_SLUG` exactly |
-| `STATUS=UNVERIFIED` | Exact-looking slug passed through because live validation unavailable | Use only if acceptable |
-| `STATUS=AMBIGUOUS` | Top candidates are too close | Ask user / inspect candidates |
-| `STATUS=ERROR` | No safe slug | Do not call |
+| `latest sonnet` | `~anthropic/claude-sonnet-latest` | non-tilde latest slug |
+| `claude latest` | ask family or inspect candidates | silently choosing Sonnet |
+| `claude 3.7 sonnet` | error/not in supplied live list | remapping to 4.x silently |
+| `sonar pro search` | `perplexity/sonar-pro-search` | `perplexity/sonar-pro` |
+| `gpt latest` | `~openai/gpt-latest` | `openai/gpt-latest` |
+| `gemini flash latest` | `~google/gemini-flash-latest` | `google/gemini-flash-latest` |
+| `deepseek r1` | `deepseek/deepseek-r1-0528` | undated if reproducibility matters |
+| `deepseek r2` | error/not in supplied live list | inventing `deepseek-r2` |
+| `kimi k2` | `moonshotai/kimi-k2.6` | old `moonshotai/kimi-k2` |
+| `mistral medium 3.5` | `mistralai/mistral-medium-3-5` | dot slug |
+| `nano banana pro` | `google/gemini-3-pro-image` | flash image variants |
+| `grok 3` | error/not in supplied live list | mapping to `grok-4.3` silently |
+| current/search | add `openrouter:web_search` | `:online` |
 
-Resolve model strings inside server-tool parameters too, such as advisor/subagent worker models and fusion panel/judge models.
+## 5. Tilde Latest Aliases
 
----
-
-## 2. Slug format
-
-    provider/model-name[:suffix]
-    ~provider/model-family-latest[:suffix]
-
-Examples:
-
-| Example | Meaning |
-|---|---|
-| `anthropic/claude-sonnet-4.6` | Exact model |
-| `anthropic/claude-sonnet-4.6:nitro` | Exact model with fastest routing |
-| `~anthropic/claude-sonnet-latest` | Tilde latest alias |
-| `~google/gemini-flash-latest:floor` | Latest Gemini Flash, cheapest routing |
-
----
-
-## 3. Slug suffixes
-
-| Suffix | Effect |
-|---|---|
-| `:nitro` | Fastest provider routing |
-| `:floor` | Cheapest provider routing |
-| `:free` | Free-tier providers only |
-| `:thinking` | Extended reasoning/thinking routing when supported |
-| `:extended` | Extended context routing when supported |
-| `:exacto` | Quality-first routing for reliability/tool use |
-| `:online` | Deprecated; prefer `openrouter:web_search` server tool |
-
-Suffixes can be appended to normal and tilde slugs. Use the resolver to apply them.
-
----
-
-## 4. Common confusions
-
-| User says | Correct slug / action | Avoid | Reason |
-|---|---|---|---|
-| `claude sonnet 4.6` | `anthropic/claude-sonnet-4.6` | guessed dash variants | Version uses dot |
-| `claude opus latest` | `~anthropic/claude-opus-latest` | guessing latest numbered release | Latest alias is explicit |
-| `claude latest` | Ask family or inspect resolver candidates | assuming Sonnet | Could mean Sonnet, Opus, Haiku, or Fable |
-| `claude 3.7 sonnet` | Not in supplied June 2026 live list; ask for current Claude 4.x or exact slug | mapping to Sonnet 4.x silently | Different model generation |
-| `sonar pro search` | `perplexity/sonar-pro-search` | `perplexity/sonar-pro` | Different Perplexity products |
-| `gpt-4.1` | `openai/gpt-4.1` | `openai/gpt-4.1-mini`, `openai/gpt-4.1-nano` | Mini/nano are distinct |
-| `gpt latest` | `~openai/gpt-latest` | `openai/gpt-latest` | Tilde alias required |
-| `gemini flash latest` | `~google/gemini-flash-latest` | `google/gemini-flash-latest` | Tilde alias required |
-| `deepseek r1` | `deepseek/deepseek-r1-0528` | old or undated if reproducibility matters | Dated R1 preferred |
-| `deepseek r2` | Not in supplied June 2026 live list; use V4/R1/V3.2 or exact slug | inventing `deepseek-r2` | No live slug provided |
-| `kimi k2` | `moonshotai/kimi-k2.6` | older `moonshotai/kimi-k2` | Latest general K2 line |
-| `mistral medium 3.5` | `mistralai/mistral-medium-3-5` | dot slug | Slug uses `3-5` |
-| `nano banana pro` | `google/gemini-3-pro-image-preview` | flash image variants | Pro image model |
-| `grok 3` | Not in supplied June 2026 live list; use `x-ai/grok-4.3`/`x-ai/grok-4.20` if acceptable | mapping to `grok-4.3` silently | `4.3` is not Grok 3 |
-| search/current info | Add `tools: [{"type": "openrouter:web_search"}]` | `:online` | Server tool is the current path |
-
----
-
-## 5. Tilde latest aliases
-
-Use when the user explicitly says “latest” without a version.
-
-| Natural language | Slug | Context | Max output |
+| natural language | slug | context | max output |
 |---|---|---:|---:|
 | Claude Sonnet latest | `~anthropic/claude-sonnet-latest` | 1,000,000 | 128,000 |
 | Claude Opus latest | `~anthropic/claude-opus-latest` | 1,000,000 | 128,000 |
@@ -93,126 +68,84 @@ Use when the user explicitly says “latest” without a version.
 | Gemini Pro latest | `~google/gemini-pro-latest` | 1,048,576 | 65,536 |
 | GPT latest | `~openai/gpt-latest` | 1,050,000 | 128,000 |
 | GPT Mini latest | `~openai/gpt-mini-latest` | 400,000 | 128,000 |
-| Kimi latest | `~moonshotai/kimi-latest` | 262,144 | 262,142 |
-
-Rules:
-- Tilde prefix `~` is part of the slug.
-- Latest alias target may change over time.
-- Tilde aliases work with suffixes, e.g. `~openai/gpt-latest:nitro`.
-- If the user says only “Claude latest” or “Gemini latest”, resolver may return `STATUS=AMBIGUOUS`; ask which family.
-
----
+| Kimi latest | `~moonshotai/kimi-latest` | 262,144 | 262,144 |
 
 ## 6. Anthropic Claude
 
-| Slug | Display name | Context | Max output | Notes |
-|---|---|---:|---:|---|
-| `anthropic/claude-fable-5` | Claude Fable 5 | 1,000,000 | 128,000 | Current Fable |
-| `anthropic/claude-sonnet-4.6` | Claude Sonnet 4.6 | 1,000,000 | 128,000 | Latest Sonnet in supplied list |
-| `anthropic/claude-sonnet-4.5` | Claude Sonnet 4.5 | 1,000,000 | 64,000 | Previous Sonnet |
-| `anthropic/claude-sonnet-4` | Claude Sonnet 4 | 1,000,000 | 64,000 | Older Sonnet 4 |
-| `anthropic/claude-opus-4.8` | Claude Opus 4.8 | 1,000,000 | 128,000 | Latest Opus in supplied list |
-| `anthropic/claude-opus-4.8-fast` | Claude Opus 4.8 Fast | 1,000,000 | 128,000 | Faster variant |
-| `anthropic/claude-opus-4.7` | Claude Opus 4.7 | 1,000,000 | 128,000 | Previous Opus |
-| `anthropic/claude-opus-4.7-fast` | Claude Opus 4.7 Fast | 1,000,000 | 128,000 | Faster variant |
-| `anthropic/claude-opus-4.6` | Claude Opus 4.6 | 1,000,000 | 128,000 | Older Opus |
-| `anthropic/claude-opus-4.6-fast` | Claude Opus 4.6 Fast | 1,000,000 | 128,000 | Faster variant |
-| `anthropic/claude-opus-4.5` | Claude Opus 4.5 | 200,000 | 64,000 | Older Opus |
-| `anthropic/claude-opus-4.1` | Claude Opus 4.1 | 200,000 | 32,000 | Legacy Opus 4.x |
-| `anthropic/claude-opus-4` | Claude Opus 4 | 200,000 | 32,000 | Legacy Opus 4 |
-| `anthropic/claude-haiku-4.5` | Claude Haiku 4.5 | 200,000 | 64,000 | Fast/low cost |
-| `anthropic/claude-3.5-haiku` | Claude 3.5 Haiku | 200,000 | 8,192 | Legacy Haiku |
-| `anthropic/claude-3-haiku` | Claude 3 Haiku | 200,000 | 4,096 | Legacy Haiku |
+| slug | display | context | max output |
+|---|---|---:|---:|
+| `anthropic/claude-sonnet-5` | Claude Sonnet 5 | 1,000,000 | 128,000 |
+| `anthropic/claude-fable-5` | Claude Fable 5 | 1,000,000 | 128,000 |
+| `anthropic/claude-sonnet-4.6` | Claude Sonnet 4.6 | 1,000,000 | 128,000 |
+| `anthropic/claude-sonnet-4.5` | Claude Sonnet 4.5 | 1,000,000 | 64,000 |
+| `anthropic/claude-sonnet-4` | Claude Sonnet 4 | 1,000,000 | 64,000 |
+| `anthropic/claude-opus-4.8` | Claude Opus 4.8 | 1,000,000 | 128,000 |
+| `anthropic/claude-opus-4.8-fast` | Claude Opus 4.8 Fast | 1,000,000 | 128,000 |
+| `anthropic/claude-opus-4.7` | Claude Opus 4.7 | 1,000,000 | 128,000 |
+| `anthropic/claude-opus-4.7-fast` | Claude Opus 4.7 Fast | 1,000,000 | 128,000 |
+| `anthropic/claude-opus-4.6` | Claude Opus 4.6 | 1,000,000 | 128,000 |
+| `anthropic/claude-opus-4.5` | Claude Opus 4.5 | 200,000 | 64,000 |
+| `anthropic/claude-opus-4.1` | Claude Opus 4.1 | 200,000 | 32,000 |
+| `anthropic/claude-opus-4` | Claude Opus 4 | 200,000 | 32,000 |
+| `anthropic/claude-haiku-4.5` | Claude Haiku 4.5 | 200,000 | 64,000 |
+| `anthropic/claude-3-haiku` | Claude 3 Haiku | 200,000 | 4,096 |
 
-Recommended:
-- Specific reproducible Sonnet: `anthropic/claude-sonnet-4.6`
-- Latest Sonnet alias: `~anthropic/claude-sonnet-latest`
-- Latest Opus alias: `~anthropic/claude-opus-latest`
-- Strong advisor/judge: `~anthropic/claude-opus-latest`
+| recommended use | slug |
+|---|---|
+| reproducible current Sonnet | `anthropic/claude-sonnet-5` |
+| latest Sonnet alias | `~anthropic/claude-sonnet-latest` |
+| strong advisor/judge | `~anthropic/claude-opus-latest` |
+| fast/cheap worker | `~anthropic/claude-haiku-latest` |
 
----
+## 7. OpenAI
 
-## 7. Perplexity Sonar
+| slug | display | context | max output |
+|---|---|---:|---:|
+| `openai/gpt-5.5` | GPT-5.5 | 1,050,000 | 128,000 |
+| `openai/gpt-5.5-pro` | GPT-5.5 Pro | 1,050,000 | 128,000 |
+| `openai/gpt-5.4` | GPT-5.4 | 1,050,000 | 128,000 |
+| `openai/gpt-5.4-pro` | GPT-5.4 Pro | 1,050,000 | 128,000 |
+| `openai/gpt-5.4-mini` | GPT-5.4 Mini | 400,000 | 128,000 |
+| `openai/gpt-5.4-nano` | GPT-5.4 Nano | 400,000 | 128,000 |
+| `openai/gpt-5.4-image-2` | GPT-5.4 Image 2 | 272,000 | 128,000 |
+| `openai/gpt-5.3-chat` | GPT-5.3 Chat | 128,000 | 16,384 |
+| `openai/gpt-5.3-codex` | GPT-5.3 Codex | 400,000 | 128,000 |
+| `openai/gpt-5.2` | GPT-5.2 | 400,000 | 128,000 |
+| `openai/gpt-5.2-chat` | GPT-5.2 Chat | 128,000 | 16,384 |
+| `openai/gpt-5.2-pro` | GPT-5.2 Pro | 400,000 | 128,000 |
+| `openai/gpt-5.2-codex` | GPT-5.2 Codex | 400,000 | 128,000 |
+| `openai/gpt-5.1` | GPT-5.1 | 400,000 | 128,000 |
+| `openai/gpt-5.1-chat` | GPT-5.1 Chat | 128,000 | 32,000 |
+| `openai/gpt-5.1-codex` | GPT-5.1 Codex | 400,000 | 128,000 |
+| `openai/gpt-5.1-codex-max` | GPT-5.1 Codex Max | 400,000 | 128,000 |
+| `openai/gpt-5.1-codex-mini` | GPT-5.1 Codex Mini | 400,000 | 100,000 |
+| `openai/gpt-5` | GPT-5 | 400,000 | 128,000 |
+| `openai/gpt-5-chat` | GPT-5 Chat | 128,000 | 16,384 |
+| `openai/gpt-5-pro` | GPT-5 Pro | 400,000 | 128,000 |
+| `openai/gpt-5-mini` | GPT-5 Mini | 400,000 | 128,000 |
+| `openai/gpt-5-nano` | GPT-5 Nano | 400,000 | ? |
+| `openai/gpt-5-codex` | GPT-5 Codex | 400,000 | 128,000 |
+| `openai/gpt-5-image` | GPT-5 Image | 400,000 | 128,000 |
+| `openai/gpt-5-image-mini` | GPT-5 Image Mini | 400,000 | 128,000 |
+| `openai/gpt-chat-latest` | GPT Chat Latest | 400,000 | 128,000 |
+| `openai/gpt-4.1` | GPT-4.1 | 1,047,576 | ? |
+| `openai/gpt-4.1-mini` | GPT-4.1 Mini | 1,047,576 | 32,768 |
+| `openai/gpt-4.1-nano` | GPT-4.1 Nano | 1,047,576 | 32,768 |
+| `openai/o3` | o3 | 200,000 | 100,000 |
+| `openai/o3-pro` | o3 Pro | 200,000 | 100,000 |
+| `openai/o3-mini` | o3 Mini | 200,000 | 100,000 |
+| `openai/o3-mini-high` | o3 Mini High | 200,000 | 100,000 |
+| `openai/o3-deep-research` | o3 Deep Research | 200,000 | 100,000 |
+| `openai/o4-mini` | o4 Mini | 200,000 | 100,000 |
+| `openai/o4-mini-high` | o4 Mini High | 200,000 | 100,000 |
+| `openai/o4-mini-deep-research` | o4 Mini Deep Research | 200,000 | 100,000 |
+| `openai/o1` | o1 | 200,000 | 100,000 |
+| `openai/o1-pro` | o1 Pro | 200,000 | 100,000 |
+| `openai/gpt-audio` | GPT Audio | 128,000 | 16,384 |
+| `openai/gpt-audio-mini` | GPT Audio Mini | 128,000 | 16,384 |
 
-| Slug | Display name | Context | Max output | Notes |
-|---|---|---:|---:|---|
-| `perplexity/sonar-pro-search` | Sonar Pro Search | 200,000 | 8,000 | Agentic multi-step search |
-| `perplexity/sonar-pro` | Sonar Pro | 200,000 | 8,000 | Standard search |
-| `perplexity/sonar-reasoning-pro` | Sonar Reasoning Pro | 128,000 | ? | Reasoning + search |
-| `perplexity/sonar-deep-research` | Sonar Deep Research | 128,000 | ? | Deep research workflow |
-| `perplexity/sonar` | Sonar | 127,072 | ? | Lightweight |
 
-Key distinction: `sonar-pro-search` is not the same as `sonar-pro`.
-
----
-
-## 8. OpenAI
-| Slug | Display name | Context | Max output | Notes |
-|---|---|---:|---:|---|
-| `openai/gpt-3.5-turbo` | OpenAI: GPT-3.5 Turbo | 16,385 | 4096 |  |
-| `openai/gpt-3.5-turbo-0613` | OpenAI: GPT-3.5 Turbo (older v0613) | 4,095 | 4096 |  |
-| `openai/gpt-3.5-turbo-16k` | OpenAI: GPT-3.5 Turbo 16k | 16,385 | 4096 |  |
-| `openai/gpt-3.5-turbo-instruct` | OpenAI: GPT-3.5 Turbo Instruct | 4,095 | 4096 |  |
-| `openai/gpt-4` | OpenAI: GPT-4 | 8,191 | 4096 |  |
-| `openai/gpt-4-turbo` | OpenAI: GPT-4 Turbo | 128,000 | 4096 |  |
-| `openai/gpt-4-turbo-preview` | OpenAI: GPT-4 Turbo Preview | 128,000 | 4096 |  |
-| `openai/gpt-4.1` | OpenAI: GPT-4.1 | 1,047,576 | None | Stable production |
-| `openai/gpt-4.1-mini` | OpenAI: GPT-4.1 Mini | 1,047,576 | 32768 |  |
-| `openai/gpt-4.1-nano` | OpenAI: GPT-4.1 Nano | 1,047,576 | 32768 |  |
-| `openai/gpt-4o` | OpenAI: GPT-4o | 128,000 | 16384 |  |
-| `openai/gpt-4o-2024-05-13` | OpenAI: GPT-4o (2024-05-13) | 128,000 | 4096 |  |
-| `openai/gpt-4o-2024-08-06` | OpenAI: GPT-4o (2024-08-06) | 128,000 | 16384 |  |
-| `openai/gpt-4o-2024-11-20` | OpenAI: GPT-4o (2024-11-20) | 128,000 | 16384 |  |
-| `openai/gpt-4o-mini` | OpenAI: GPT-4o-mini | 128,000 | 16384 |  |
-| `openai/gpt-4o-mini-2024-07-18` | OpenAI: GPT-4o-mini (2024-07-18) | 128,000 | 16384 |  |
-| `openai/gpt-4o-mini-search-preview` | OpenAI: GPT-4o-mini Search Preview | 128,000 | 16384 |  |
-| `openai/gpt-4o-search-preview` | OpenAI: GPT-4o Search Preview | 128,000 | 16384 |  |
-| `openai/gpt-5` | OpenAI: GPT-5 | 400,000 | 128000 |  |
-| `openai/gpt-5-chat` | OpenAI: GPT-5 Chat | 128,000 | 16384 |  |
-| `openai/gpt-5-codex` | OpenAI: GPT-5 Codex | 400,000 | 128000 |  |
-| `openai/gpt-5-image` | OpenAI: GPT-5 Image | 400,000 | 128000 |  |
-| `openai/gpt-5-image-mini` | OpenAI: GPT-5 Image Mini | 400,000 | 128000 |  |
-| `openai/gpt-5-mini` | OpenAI: GPT-5 Mini | 400,000 | 128000 |  |
-| `openai/gpt-5-nano` | OpenAI: GPT-5 Nano | 400,000 | None |  |
-| `openai/gpt-5-pro` | OpenAI: GPT-5 Pro | 400,000 | 128000 |  |
-| `openai/gpt-5.1` | OpenAI: GPT-5.1 | 400,000 | 128000 |  |
-| `openai/gpt-5.1-chat` | OpenAI: GPT-5.1 Chat | 128,000 | 32000 |  |
-| `openai/gpt-5.1-codex` | OpenAI: GPT-5.1-Codex | 400,000 | 128000 |  |
-| `openai/gpt-5.1-codex-max` | OpenAI: GPT-5.1-Codex-Max | 400,000 | 128000 |  |
-| `openai/gpt-5.1-codex-mini` | OpenAI: GPT-5.1-Codex-Mini | 400,000 | 100000 |  |
-| `openai/gpt-5.2` | OpenAI: GPT-5.2 | 400,000 | 128000 |  |
-| `openai/gpt-5.2-chat` | OpenAI: GPT-5.2 Chat | 128,000 | 16384 |  |
-| `openai/gpt-5.2-codex` | OpenAI: GPT-5.2-Codex | 400,000 | 128000 |  |
-| `openai/gpt-5.2-pro` | OpenAI: GPT-5.2 Pro | 400,000 | 128000 |  |
-| `openai/gpt-5.3-chat` | OpenAI: GPT-5.3 Chat | 128,000 | 16384 |  |
-| `openai/gpt-5.3-codex` | OpenAI: GPT-5.3-Codex | 400,000 | 128000 |  |
-| `openai/gpt-5.4` | OpenAI: GPT-5.4 | 1,050,000 | 128000 |  |
-| `openai/gpt-5.4-image-2` | OpenAI: GPT-5.4 Image 2 | 272,000 | 128000 |  |
-| `openai/gpt-5.4-mini` | OpenAI: GPT-5.4 Mini | 400,000 | 128000 |  |
-| `openai/gpt-5.4-nano` | OpenAI: GPT-5.4 Nano | 400,000 | 128000 |  |
-| `openai/gpt-5.4-pro` | OpenAI: GPT-5.4 Pro | 1,050,000 | 128000 |  |
-| `openai/gpt-5.5` | OpenAI: GPT-5.5 | 1,050,000 | 128000 | Current flagship |
-| `openai/gpt-5.5-pro` | OpenAI: GPT-5.5 Pro | 1,050,000 | 128000 | Highest capability |
-| `openai/gpt-audio` | OpenAI: GPT Audio | 128,000 | 16384 | TTS/audio |
-| `openai/gpt-audio-mini` | OpenAI: GPT Audio Mini | 128,000 | 16384 | TTS/audio |
-| `openai/gpt-chat-latest` | OpenAI: GPT Chat Latest | 400,000 | 128000 |  |
-| `openai/gpt-oss-120b` | OpenAI: gpt-oss-120b | 131,072 | None |  |
-| `openai/gpt-oss-120b:free` | OpenAI: gpt-oss-120b (free) | 131,072 | 131072 |  |
-| `openai/gpt-oss-20b` | OpenAI: gpt-oss-20b | 131,072 | None |  |
-| `openai/gpt-oss-20b:free` | OpenAI: gpt-oss-20b (free) | 131,072 | 8192 |  |
-| `openai/gpt-oss-safeguard-20b` | OpenAI: gpt-oss-safeguard-20b | 131,072 | 65536 |  |
-| `openai/o1` | OpenAI: o1 | 200,000 | 100000 |  |
-| `openai/o1-pro` | OpenAI: o1-pro | 200,000 | 100000 |  |
-| `openai/o3` | OpenAI: o3 | 200,000 | 100000 | Strong reasoning |
-| `openai/o3-deep-research` | OpenAI: o3 Deep Research | 200,000 | 100000 | Strong reasoning |
-| `openai/o3-mini` | OpenAI: o3 Mini | 200,000 | 100000 |  |
-| `openai/o3-mini-high` | OpenAI: o3 Mini High | 200,000 | 100000 |  |
-| `openai/o3-pro` | OpenAI: o3 Pro | 200,000 | 100000 | Strong reasoning |
-| `openai/o4-mini` | OpenAI: o4 Mini | 200,000 | 100000 | Fast reasoning |
-| `openai/o4-mini-deep-research` | OpenAI: o4 Mini Deep Research | 200,000 | 100000 | Fast reasoning |
-| `openai/o4-mini-high` | OpenAI: o4 Mini High | 200,000 | 100000 | Fast reasoning |
-
-## 9. Google Gemini
+## 8. Google Gemini
 
 | Slug | Display name | Context | Notes |
 |---|---|---:|---|
@@ -237,7 +170,7 @@ Google image/audio:
 
 ---
 
-## 10. Meta Llama
+## 9. Meta Llama
 
 | Slug | Display name | Context | Notes |
 |---|---|---:|---|
@@ -248,7 +181,7 @@ Google image/audio:
 
 ---
 
-## 11. DeepSeek
+## 10. DeepSeek
 
 | Slug | Display name | Context | Notes |
 |---|---|---:|---|
@@ -262,7 +195,7 @@ Google image/audio:
 
 ---
 
-## 12. MoonshotAI Kimi
+## 11. MoonshotAI Kimi
 
 | Slug | Display name | Context | Notes |
 |---|---|---:|---|
@@ -277,7 +210,7 @@ Recommended for “kimi k2”: `moonshotai/kimi-k2.6`.
 
 ---
 
-## 13. Mistral
+## 12. Mistral
 
 | Slug | Display name | Context | Notes |
 |---|---|---:|---|
@@ -291,7 +224,7 @@ Recommended for “kimi k2”: `moonshotai/kimi-k2.6`.
 
 ---
 
-## 14. xAI / Grok
+## 13. xAI / Grok
 
 | Slug | Display name | Context | Notes |
 |---|---|---:|---|
@@ -302,7 +235,7 @@ Recommended for “kimi k2”: `moonshotai/kimi-k2.6`.
 
 ---
 
-## 15. Qwen and routers
+## 14. Qwen and routers
 
 | Slug | Display name | Context | Notes |
 |---|---|---:|---|
@@ -319,7 +252,7 @@ Use routers only when user explicitly wants automatic routing.
 
 ---
 
-## 16. Multimodal generation
+## 15. Multimodal generation
 
 ### Endpoint map
 
@@ -362,7 +295,7 @@ Video models may not appear in `/api/v1/models`; resolver includes static media 
 
 ---
 
-## 17. Minimal call checklist
+## 16. Minimal call checklist
 
 1. Resolve:
    ```bash
