@@ -38,7 +38,7 @@ VARIANT_TOKENS = {
     "research", "lite", "codex", "image", "audio", "tts", "free", "distill",
     "customtools", "custom", "tools", "thinking", "extended", "instruct", "chat",
     "omni", "vl", "max", "plus", "flash", "scout", "maverick", "fable", "haiku",
-    "opus", "sonnet", "turbo", "safeguard", "vision", "code",
+    "opus", "sonnet", "turbo", "safeguard", "vision", "code", "multi", "agent",
 }
 AMBIGUITY_MIN_GAP = 14
 AMBIGUITY_RATIO = 0.12
@@ -66,140 +66,102 @@ def fm(
     return item
 
 
-# Static fallback is intentionally curated, not exhaustive. Live /models is authoritative.
-FALLBACK_MODELS: List[Dict[str, Any]] = [
-    # Tilde latest aliases visible in the supplied live table.
-    fm("~anthropic/claude-sonnet-latest", "Anthropic Claude Sonnet Latest", 1000000, 128000, "text+image+file->text"),
-    fm("~anthropic/claude-opus-latest", "Anthropic Claude Opus Latest", 1000000, 128000, "text+image+file->text"),
-    fm("~anthropic/claude-haiku-latest", "Anthropic Claude Haiku Latest", 200000, 64000, "text+image+file->text"),
-    fm("~anthropic/claude-fable-latest", "Anthropic Claude Fable Latest", 1000000, 128000, "text+image+file->text"),
-    fm("~google/gemini-flash-latest", "Google Gemini Flash Latest", 1048576, 65536, "text+image+file+audio+video->text"),
-    fm("~google/gemini-pro-latest", "Google Gemini Pro Latest", 1048576, 65536, "text+image+file+audio+video->text"),
-    fm("~openai/gpt-latest", "OpenAI GPT Latest", 1050000, 128000, "text+image+file->text"),
-    fm("~openai/gpt-mini-latest", "OpenAI GPT Mini Latest", 400000, 128000, "text+image+file->text"),
-    fm("~moonshotai/kimi-latest", "MoonshotAI Kimi Latest", 262144, 262144, "text+image->text"),
+# Confirmed slugs served through non-chat or hybrid media endpoints.
+KNOWN_MEDIA_SLUGS: Dict[str, str] = {
+    "openai/gpt-image-2": "images",
+    "openai/gpt-image-1": "images",
+    "openai/gpt-image-1-mini": "images",
+    "openai/gpt-5.4-image-2": "chat_or_images",
+    "google/gemini-3-pro-image": "images",
+    "google/gemini-3-pro-image-preview": "images",
+    "google/gemini-3.1-flash-image": "images",
+    "google/gemini-3.1-flash-image-preview": "images",
+    "google/gemini-3.1-flash-lite-image": "images",
+    "google/gemini-2.5-flash-image": "images",
+    "bytedance-seed/seedream-4.5": "images",
+    "google/veo-3.1": "videos",
+    "google/veo-3.1-fast": "videos",
+    "bytedance/seedance-2.0": "videos",
+    "bytedance/seedance-2.0-fast": "videos",
+    "google/gemini-3.1-flash-tts-preview": "audio/speech",
+}
 
-    # Anthropic.
+# Static fallback is curated, not exhaustive. Live /models is authoritative.
+FALLBACK_MODELS: List[Dict[str, Any]] = [
+    fm("~anthropic/claude-sonnet-latest", "Anthropic: Claude Sonnet Latest", 1000000, 128000, "text+image+file->text"),
+    fm("~anthropic/claude-opus-latest", "Anthropic: Claude Opus Latest", 1000000, 128000, "text+image+file->text"),
+    fm("~anthropic/claude-haiku-latest", "Anthropic: Claude Haiku Latest", 200000, 64000, "text+image+file->text"),
+    fm("~anthropic/claude-fable-latest", "Anthropic: Claude Fable Latest", 1000000, 128000, "text+image+file->text"),
+    fm("~google/gemini-flash-latest", "Google: Gemini Flash Latest", 1048576, 65536, "text+image+file+audio+video->text"),
+    fm("~google/gemini-pro-latest", "Google: Gemini Pro Latest", 1048576, 65536, "text+image+file+audio+video->text"),
+    fm("~openai/gpt-latest", "OpenAI: GPT Latest", 1050000, 128000, "text+image+file->text"),
+    fm("~openai/gpt-mini-latest", "OpenAI: GPT Mini Latest", 400000, 128000, "text+image+file->text"),
+    fm("~moonshotai/kimi-latest", "MoonshotAI: Kimi Latest", 262144, 262144, "text+image->text"),
+
     fm("anthropic/claude-sonnet-5", "Anthropic: Claude Sonnet 5", 1000000, 128000, "text+image+file->text"),
     fm("anthropic/claude-fable-5", "Anthropic: Claude Fable 5", 1000000, 128000, "text+image+file->text"),
     fm("anthropic/claude-sonnet-4.6", "Anthropic: Claude Sonnet 4.6", 1000000, 128000, "text+image+file->text"),
     fm("anthropic/claude-sonnet-4.5", "Anthropic: Claude Sonnet 4.5", 1000000, 64000, "text+image+file->text"),
-    fm("anthropic/claude-sonnet-4", "Anthropic: Claude Sonnet 4", 1000000, 64000, "text+image+file->text"),
     fm("anthropic/claude-opus-4.8", "Anthropic: Claude Opus 4.8", 1000000, 128000, "text+image+file->text"),
     fm("anthropic/claude-opus-4.8-fast", "Anthropic: Claude Opus 4.8 Fast", 1000000, 128000, "text+image+file->text"),
-    fm("anthropic/claude-opus-4.7", "Anthropic: Claude Opus 4.7", 1000000, 128000, "text+image+file->text"),
-    fm("anthropic/claude-opus-4.7-fast", "Anthropic: Claude Opus 4.7 Fast", 1000000, 128000, "text+image+file->text"),
-    fm("anthropic/claude-opus-4.6", "Anthropic: Claude Opus 4.6", 1000000, 128000, "text+image+file->text"),
-    fm("anthropic/claude-opus-4.5", "Anthropic: Claude Opus 4.5", 200000, 64000, "text+image+file->text"),
-    fm("anthropic/claude-opus-4.1", "Anthropic: Claude Opus 4.1", 200000, 32000, "text+image+file->text"),
-    fm("anthropic/claude-opus-4", "Anthropic: Claude Opus 4", 200000, 32000, "text+image+file->text"),
     fm("anthropic/claude-haiku-4.5", "Anthropic: Claude Haiku 4.5", 200000, 64000, "text+image+file->text"),
-    fm("anthropic/claude-3-haiku", "Anthropic: Claude 3 Haiku", 200000, 4096, "text+image->text"),
 
-    # OpenAI.
     fm("openai/gpt-5.5", "OpenAI: GPT-5.5", 1050000, 128000, "text+image+file->text"),
     fm("openai/gpt-5.5-pro", "OpenAI: GPT-5.5 Pro", 1050000, 128000, "text+image+file->text"),
     fm("openai/gpt-5.4", "OpenAI: GPT-5.4", 1050000, 128000, "text+image+file->text"),
     fm("openai/gpt-5.4-pro", "OpenAI: GPT-5.4 Pro", 1050000, 128000, "text+image+file->text"),
     fm("openai/gpt-5.4-mini", "OpenAI: GPT-5.4 Mini", 400000, 128000, "text+image+file->text"),
     fm("openai/gpt-5.4-nano", "OpenAI: GPT-5.4 Nano", 400000, 128000, "text+image+file->text"),
-    fm("openai/gpt-5.4-image-2", "OpenAI: GPT-5.4 Image 2", 272000, 128000, "text+image+file->text+image"),
     fm("openai/gpt-5.3-chat", "OpenAI: GPT-5.3 Chat", 128000, 16384, "text+image+file->text"),
     fm("openai/gpt-5.3-codex", "OpenAI: GPT-5.3 Codex", 400000, 128000, "text+image->text"),
-    fm("openai/gpt-5.2", "OpenAI: GPT-5.2", 400000, 128000, "text+image+file->text"),
-    fm("openai/gpt-5.2-chat", "OpenAI: GPT-5.2 Chat", 128000, 16384, "text+image+file->text"),
-    fm("openai/gpt-5.2-pro", "OpenAI: GPT-5.2 Pro", 400000, 128000, "text+image+file->text"),
-    fm("openai/gpt-5.2-codex", "OpenAI: GPT-5.2 Codex", 400000, 128000, "text+image->text"),
-    fm("openai/gpt-5.1", "OpenAI: GPT-5.1", 400000, 128000, "text+image+file->text"),
-    fm("openai/gpt-5.1-chat", "OpenAI: GPT-5.1 Chat", 128000, 32000, "text+image+file->text"),
-    fm("openai/gpt-5.1-codex", "OpenAI: GPT-5.1 Codex", 400000, 128000, "text+image->text"),
-    fm("openai/gpt-5.1-codex-max", "OpenAI: GPT-5.1 Codex Max", 400000, 128000, "text+image->text"),
-    fm("openai/gpt-5.1-codex-mini", "OpenAI: GPT-5.1 Codex Mini", 400000, 100000, "text+image->text"),
     fm("openai/gpt-5", "OpenAI: GPT-5", 400000, 128000, "text+image+file->text"),
     fm("openai/gpt-5-chat", "OpenAI: GPT-5 Chat", 128000, 16384, "text+image+file->text"),
     fm("openai/gpt-5-pro", "OpenAI: GPT-5 Pro", 400000, 128000, "text+image+file->text"),
     fm("openai/gpt-5-mini", "OpenAI: GPT-5 Mini", 400000, 128000, "text+image+file->text"),
-    fm("openai/gpt-5-nano", "OpenAI: GPT-5 Nano", 400000, None, "text+image+file->text"),
     fm("openai/gpt-5-codex", "OpenAI: GPT-5 Codex", 400000, 128000, "text+image->text"),
-    fm("openai/gpt-5-image", "OpenAI: GPT-5 Image", 400000, 128000, "text+image+file->text+image"),
-    fm("openai/gpt-5-image-mini", "OpenAI: GPT-5 Image Mini", 400000, 128000, "text+image+file->text+image"),
     fm("openai/gpt-chat-latest", "OpenAI: GPT Chat Latest", 400000, 128000, "text+image+file->text"),
     fm("openai/gpt-4.1", "OpenAI: GPT-4.1", 1047576, None, "text+image+file->text"),
     fm("openai/gpt-4.1-mini", "OpenAI: GPT-4.1 Mini", 1047576, 32768, "text+image+file->text"),
-    fm("openai/gpt-4.1-nano", "OpenAI: GPT-4.1 Nano", 1047576, 32768, "text+image+file->text"),
     fm("openai/o1", "OpenAI: o1", 200000, 100000, "text+image+file->text"),
     fm("openai/o1-pro", "OpenAI: o1 Pro", 200000, 100000, "text+image+file->text"),
     fm("openai/o3", "OpenAI: o3", 200000, 100000, "text+image+file->text"),
     fm("openai/o3-pro", "OpenAI: o3 Pro", 200000, 100000, "text+image+file->text"),
-    fm("openai/o3-mini", "OpenAI: o3 Mini", 200000, 100000, "text+file->text"),
-    fm("openai/o3-mini-high", "OpenAI: o3 Mini High", 200000, 100000, "text+file->text"),
-    fm("openai/o3-deep-research", "OpenAI: o3 Deep Research", 200000, 100000, "text+image+file->text"),
     fm("openai/o4-mini", "OpenAI: o4 Mini", 200000, 100000, "text+image+file->text"),
-    fm("openai/o4-mini-high", "OpenAI: o4 Mini High", 200000, 100000, "text+image+file->text"),
-    fm("openai/o4-mini-deep-research", "OpenAI: o4 Mini Deep Research", 200000, 100000, "text+image+file->text"),
     fm("openai/gpt-audio", "OpenAI: GPT Audio", 128000, 16384, "text+audio->text+audio"),
     fm("openai/gpt-audio-mini", "OpenAI: GPT Audio Mini", 128000, 16384, "text+audio->text+audio"),
 
-    # Google Gemini/media.
     fm("google/gemini-3.5-flash", "Google: Gemini 3.5 Flash", 1048576, 65536, "text+image+file+audio+video->text"),
     fm("google/gemini-3.1-pro-preview", "Google: Gemini 3.1 Pro Preview", 1048576, 65536, "text+image+file+audio+video->text"),
-    fm("google/gemini-3.1-pro-preview-customtools", "Google: Gemini 3.1 Pro Preview Custom Tools", 1048756, 65536, "text+image+file+audio+video->text"),
     fm("google/gemini-3.1-flash-lite", "Google: Gemini 3.1 Flash Lite", 1048576, 65536, "text+image+file+audio+video->text"),
-    fm("google/gemini-3.1-flash-lite-preview", "Google: Gemini 3.1 Flash Lite Preview", 1048576, 65536, "text+image+file+audio+video->text"),
     fm("google/gemini-3-flash-preview", "Google: Gemini 3 Flash Preview", 1048576, 65535, "text+image+file+audio+video->text"),
-    fm("google/gemini-3.1-flash-image", "Google: Nano Banana 2 (Gemini 3.1 Flash Image)", 131072, 32768, "text+image->text+image"),
-    fm("google/gemini-3.1-flash-image-preview", "Google: Nano Banana 2 (Gemini 3.1 Flash Image Preview)", 131072, 32768, "text+image->text+image"),
-    fm("google/gemini-3.1-flash-lite-image", "Google: Nano Banana 2 Lite (Gemini 3.1 Flash Lite Image)", 65536, 66000, "text+image->text+image"),
-    fm("google/gemini-3-pro-image", "Google: Nano Banana Pro (Gemini 3 Pro Image)", 65536, 32768, "text+image->text+image"),
-    fm("google/gemini-3-pro-image-preview", "Google: Nano Banana Pro (Gemini 3 Pro Image Preview)", 65536, 32768, "text+image->text+image"),
     fm("google/gemini-2.5-pro", "Google: Gemini 2.5 Pro", 1048576, 65536, "text+image+file+audio+video->text"),
-    fm("google/gemini-2.5-pro-preview", "Google: Gemini 2.5 Pro Preview", 1048576, 65536, "text+image+file+audio->text"),
     fm("google/gemini-2.5-flash", "Google: Gemini 2.5 Flash", 1048576, 65535, "text+image+file+audio+video->text"),
     fm("google/gemini-2.5-flash-lite", "Google: Gemini 2.5 Flash Lite", 1048576, 65535, "text+image+file+audio+video->text"),
-    fm("google/gemini-2.5-flash-image", "Google: Nano Banana (Gemini 2.5 Flash Image)", 32768, 32768, "text+image->text+image"),
     fm("google/lyria-3-pro-preview", "Google: Lyria 3 Pro Preview", 1048576, 65536, "text+image->text+audio"),
     fm("google/lyria-3-clip-preview", "Google: Lyria 3 Clip Preview", 1048576, 65536, "text+image->text+audio"),
 
-    # Perplexity.
     fm("perplexity/sonar-pro-search", "Perplexity: Sonar Pro Search", 200000, 8000, "text+image->text"),
     fm("perplexity/sonar-pro", "Perplexity: Sonar Pro", 200000, 8000, "text+image->text"),
     fm("perplexity/sonar-reasoning-pro", "Perplexity: Sonar Reasoning Pro", 128000, None, "text+image->text"),
     fm("perplexity/sonar-deep-research", "Perplexity: Sonar Deep Research", 128000, None, "text->text"),
     fm("perplexity/sonar", "Perplexity: Sonar", 127072, None, "text+image->text"),
 
-    # Open/open-weight and specialists.
     fm("meta-llama/llama-4-maverick", "Meta: Llama 4 Maverick", 1048576, 16384, "text+image->text"),
     fm("meta-llama/llama-4-scout", "Meta: Llama 4 Scout", 10000000, 16384, "text+image->text"),
-    fm("meta-llama/llama-guard-4-12b", "Meta: Llama Guard 4 12B", 163840, 16384, "text+image->text"),
     fm("meta-llama/llama-3.3-70b-instruct", "Meta: Llama 3.3 70B Instruct", 131072, 16384, "text->text"),
-    fm("meta-llama/llama-3.3-70b-instruct:free", "Meta: Llama 3.3 70B Instruct Free", 131072, None, "text->text"),
 
-    fm("deepseek/deepseek-chat", "DeepSeek: Chat", 131072, 16000, "text->text"),
-    fm("deepseek/deepseek-chat-v3-0324", "DeepSeek: Chat V3 0324", 163840, 16384, "text->text"),
-    fm("deepseek/deepseek-chat-v3.1", "DeepSeek: Chat V3.1", 163840, 32768, "text->text"),
-    fm("deepseek/deepseek-v3.1-terminus", "DeepSeek: V3.1 Terminus", 163840, 32768, "text->text"),
-    fm("deepseek/deepseek-v3.2", "DeepSeek: V3.2", 131072, 64000, "text->text"),
-    fm("deepseek/deepseek-v3.2-exp", "DeepSeek: V3.2 Exp", 163840, 65536, "text->text"),
-    fm("deepseek/deepseek-r1", "DeepSeek: R1", 163840, 16000, "text->text"),
-    fm("deepseek/deepseek-r1-0528", "DeepSeek: R1 0528", 163840, 32768, "text->text"),
-    fm("deepseek/deepseek-r1-distill-llama-70b", "DeepSeek: R1 Distill Llama 70B", 128000, 8192, "text->text"),
     fm("deepseek/deepseek-v4-pro", "DeepSeek: V4 Pro", 1048576, 384000, "text->text"),
     fm("deepseek/deepseek-v4-flash", "DeepSeek: V4 Flash", 1048576, None, "text->text"),
+    fm("deepseek/deepseek-v3.2", "DeepSeek: V3.2", 131072, 64000, "text->text"),
+    fm("deepseek/deepseek-r1-0528", "DeepSeek: R1 0528", 163840, 32768, "text->text"),
+    fm("deepseek/deepseek-r1", "DeepSeek: R1", 163840, 16000, "text->text"),
 
     fm("moonshotai/kimi-k2.7-code", "MoonshotAI: Kimi K2.7 Code", 262144, 16384, "text+image->text"),
     fm("moonshotai/kimi-k2.6", "MoonshotAI: Kimi K2.6", 262144, 262144, "text+image->text"),
-    fm("moonshotai/kimi-k2.5", "MoonshotAI: Kimi K2.5", 262144, None, "text+image->text"),
     fm("moonshotai/kimi-k2-thinking", "MoonshotAI: Kimi K2 Thinking", 262144, 100352, "text->text"),
-    fm("moonshotai/kimi-k2-0905", "MoonshotAI: Kimi K2 0905", 262144, 100352, "text->text"),
-    fm("moonshotai/kimi-k2", "MoonshotAI: Kimi K2 0711", 131072, 100352, "text->text"),
 
     fm("mistralai/mistral-large-2512", "Mistral: Mistral Large 3 2512", 262144, None, "text+image+file->text"),
-    fm("mistralai/mistral-large", "Mistral: Mistral Large", 128000, None, "text+file->text"),
     fm("mistralai/mistral-medium-3-5", "Mistral: Mistral Medium 3.5", 262144, None, "text+image+file->text"),
-    fm("mistralai/mistral-medium-3.1", "Mistral: Mistral Medium 3.1", 131072, None, "text+image+file->text"),
-    fm("mistralai/mistral-medium-3", "Mistral: Mistral Medium 3", 131072, None, "text+image+file->text"),
-    fm("mistralai/mistral-small-2603", "Mistral: Mistral Small 4", 262144, None, "text+image->text"),
-    fm("mistralai/mistral-small-3.2-24b-instruct", "Mistral: Mistral Small 3.2 24B", 128000, 16384, "text+image->text"),
     fm("mistralai/devstral-2512", "Mistral: Devstral 2 2512", 262144, None, "text+file->text"),
     fm("mistralai/codestral-2508", "Mistral: Codestral 2508", 256000, None, "text+file->text"),
     fm("mistralai/voxtral-small-24b-2507", "Mistral: Voxtral Small 24B 2507", 32000, None, "text+file+audio->text"),
@@ -207,491 +169,37 @@ FALLBACK_MODELS: List[Dict[str, Any]] = [
     fm("x-ai/grok-4.3", "xAI: Grok 4.3", 1000000, None, "text+image+file->text"),
     fm("x-ai/grok-4.20", "xAI: Grok 4.20", 2000000, None, "text+image+file->text"),
     fm("x-ai/grok-4.20-multi-agent", "xAI: Grok 4.20 Multi-Agent", 2000000, None, "text+image+file->text"),
-    fm("x-ai/grok-build-0.1", "xAI: Grok Build 0.1", 256000, None, "text+image->text"),
 
     fm("qwen/qwen3.7-max", "Qwen: Qwen3.7 Max", 1000000, 65536, "text->text"),
     fm("qwen/qwen3.7-plus", "Qwen: Qwen3.7 Plus", 1000000, 65536, "text+image->text"),
-    fm("qwen/qwen3.6-flash", "Qwen: Qwen3.6 Flash", 1000000, 65536, "text+image+video->text"),
-    fm("qwen/qwen3.6-plus", "Qwen: Qwen3.6 Plus", 1000000, 65536, "text+image+video->text"),
-    fm("qwen/qwen3.5-plus-20260420", "Qwen: Qwen3.5 Plus 2026-04-20", 1000000, 65536, "text+image+video->text"),
-    fm("qwen/qwen3-max", "Qwen: Qwen3 Max", 262144, 32768, "text->text"),
-    fm("qwen/qwen3-max-thinking", "Qwen: Qwen3 Max Thinking", 262144, 32768, "text->text"),
     fm("qwen/qwen3-coder", "Qwen: Qwen3 Coder", 1048576, 65536, "text->text"),
-    fm("qwen/qwen3-coder-plus", "Qwen: Qwen3 Coder Plus", 1000000, 65536, "text->text"),
-    fm("qwen/qwen3-coder-flash", "Qwen: Qwen3 Coder Flash", 1000000, 65536, "text->text"),
-    fm("qwen/qwen3-coder-next", "Qwen: Qwen3 Coder Next", 262144, 262144, "text->text"),
     fm("qwen/qwen3-coder:free", "Qwen: Qwen3 Coder Free", 1048576, 262000, "text->text"),
-    fm("qwen/qwen-plus", "Qwen: Qwen Plus", 1000000, 32768, "text->text"),
-    fm("qwen/qwen-plus-2025-07-28", "Qwen: Qwen Plus 0728", 1000000, 32768, "text->text"),
+    fm("qwen/qwen3-max-thinking", "Qwen: Qwen3 Max Thinking", 262144, 32768, "text->text"),
     fm("qwen/qwen-plus-2025-07-28:thinking", "Qwen: Qwen Plus 0728 Thinking", 1000000, 32768, "text->text"),
 
     fm("cohere/north-mini-code:free", "Cohere: North Mini Code Free", 256000, 64000, "text->text"),
+    fm("sakana/fugu-ultra", "Sakana: Fugu Ultra", 1000000, 128000, "text+image->text"),
+    fm("z-ai/glm-5.2", "Z.ai: GLM 5.2", 1048576, 131072, "text->text"),
+    fm("nvidia/nemotron-3-ultra-550b-a55b", "NVIDIA: Nemotron 3 Ultra", 1000000, 16384, "text->text"),
+    fm("poolside/laguna-xs-2.1", "Poolside: Laguna XS 2.1", 262144, 32768, "text->text"),
     fm("openrouter/auto", "OpenRouter: Auto Router", 2000000, None, "text+image+file->text"),
     fm("openrouter/free", "OpenRouter: Free Models Router", 200000, None, "text->text"),
     fm("openrouter/fusion", "OpenRouter: Fusion Router", 1000000, None, "text->text"),
     fm("openrouter/pareto-code", "OpenRouter: Pareto Code Router", 2000000, None, "text->text"),
 
-    # Media endpoints not guaranteed in /models.
+    fm("openai/gpt-image-2", "OpenAI: GPT Image 2", None, None, "text+image->image", "images"),
+    fm("openai/gpt-5.4-image-2", "OpenAI: GPT-5.4 Image 2", 272000, 128000, "text+image+file->text+image", "chat_or_images"),
+    fm("google/gemini-3-pro-image", "Google: Nano Banana Pro", 65536, 32768, "text+image->image", "images"),
+    fm("google/gemini-3.1-flash-image", "Google: Nano Banana 2", 131072, 32768, "text+image->image", "images"),
+    fm("google/gemini-3.1-flash-lite-image", "Google: Nano Banana 2 Lite", 65536, 66000, "text+image->image", "images"),
+    fm("google/gemini-2.5-flash-image", "Google: Nano Banana", 32768, 32768, "text+image->image", "images"),
+    fm("bytedance-seed/seedream-4.5", "ByteDance Seed: Seedream 4.5", None, None, "text+image->image", "images"),
     fm("google/veo-3.1", "Google: Veo 3.1", None, None, "text->video", "videos"),
     fm("google/veo-3.1-fast", "Google: Veo 3.1 Fast", None, None, "text->video", "videos"),
     fm("bytedance/seedance-2.0", "ByteDance: Seedance 2.0", None, None, "text->video", "videos"),
     fm("bytedance/seedance-2.0-fast", "ByteDance: Seedance 2.0 Fast", None, None, "text->video", "videos"),
-    fm("bytedance-seed/seedream-4.5", "ByteDance Seed: Seedream 4.5", None, None, "text+image->image"),
     fm("google/gemini-3.1-flash-tts-preview", "Google: Gemini 3.1 Flash TTS Preview", None, None, "text->audio", "audio/speech"),
 ]
-
-CURATED_ALIASES: Dict[str, str] = {
-    # Latest aliases.
-    "claude sonnet latest": "~anthropic/claude-sonnet-latest",
-    "latest claude sonnet": "~anthropic/claude-sonnet-latest",
-    "latest sonnet": "~anthropic/claude-sonnet-latest",
-    "sonnet latest": "~anthropic/claude-sonnet-latest",
-    "claude opus latest": "~anthropic/claude-opus-latest",
-    "latest claude opus": "~anthropic/claude-opus-latest",
-    "opus latest": "~anthropic/claude-opus-latest",
-    "claude haiku latest": "~anthropic/claude-haiku-latest",
-    "latest claude haiku": "~anthropic/claude-haiku-latest",
-    "haiku latest": "~anthropic/claude-haiku-latest",
-    "claude fable latest": "~anthropic/claude-fable-latest",
-    "latest claude fable": "~anthropic/claude-fable-latest",
-    "fable latest": "~anthropic/claude-fable-latest",
-    "gemini flash latest": "~google/gemini-flash-latest",
-    "latest gemini flash": "~google/gemini-flash-latest",
-    "gemini pro latest": "~google/gemini-pro-latest",
-    "latest gemini pro": "~google/gemini-pro-latest",
-    "gpt latest": "~openai/gpt-latest",
-    "openai gpt latest": "~openai/gpt-latest",
-    "latest gpt": "~openai/gpt-latest",
-    "gpt mini latest": "~openai/gpt-mini-latest",
-    "openai gpt mini latest": "~openai/gpt-mini-latest",
-    "kimi latest": "~moonshotai/kimi-latest",
-    "moonshot kimi latest": "~moonshotai/kimi-latest",
-    "moonshotai kimi latest": "~moonshotai/kimi-latest",
-
-    # Anthropic Claude.
-    "claude sonnet 5": "anthropic/claude-sonnet-5",
-    "sonnet 5": "anthropic/claude-sonnet-5",
-    "claude 5 sonnet": "anthropic/claude-sonnet-5",
-    "claude fable 5": "anthropic/claude-fable-5",
-    "fable 5": "anthropic/claude-fable-5",
-    "claude 5 fable": "anthropic/claude-fable-5",
-    "anthropic fable 5": "anthropic/claude-fable-5",
-    "claude mythos": "anthropic/claude-fable-5",
-    "claude mythos 5": "anthropic/claude-fable-5",
-    "claude opus 4.8": "anthropic/claude-opus-4.8",
-    "opus 4.8": "anthropic/claude-opus-4.8",
-    "claude opus 4 8": "anthropic/claude-opus-4.8",
-    "opus 4 8": "anthropic/claude-opus-4.8",
-    "claude opus 4.8 fast": "anthropic/claude-opus-4.8-fast",
-    "opus 4.8 fast": "anthropic/claude-opus-4.8-fast",
-    "claude opus fast": "anthropic/claude-opus-4.8-fast",
-    "opus fast": "anthropic/claude-opus-4.8-fast",
-    "fast opus": "anthropic/claude-opus-4.8-fast",
-    "claude opus 4.7": "anthropic/claude-opus-4.7",
-    "opus 4.7": "anthropic/claude-opus-4.7",
-    "claude opus 4.7 fast": "anthropic/claude-opus-4.7-fast",
-    "opus 4.7 fast": "anthropic/claude-opus-4.7-fast",
-    "claude opus 4.6": "anthropic/claude-opus-4.6",
-    "opus 4.6": "anthropic/claude-opus-4.6",
-    "claude opus 4.5": "anthropic/claude-opus-4.5",
-    "opus 4.5": "anthropic/claude-opus-4.5",
-    "claude opus 4.1": "anthropic/claude-opus-4.1",
-    "opus 4.1": "anthropic/claude-opus-4.1",
-    "claude opus 4": "anthropic/claude-opus-4",
-    "opus 4": "anthropic/claude-opus-4",
-    "claude sonnet 4.6": "anthropic/claude-sonnet-4.6",
-    "sonnet 4.6": "anthropic/claude-sonnet-4.6",
-    "claude sonnet 4.5": "anthropic/claude-sonnet-4.5",
-    "sonnet 4.5": "anthropic/claude-sonnet-4.5",
-    "claude sonnet 4": "anthropic/claude-sonnet-4",
-    "sonnet 4": "anthropic/claude-sonnet-4",
-    "claude haiku 4.5": "anthropic/claude-haiku-4.5",
-    "haiku 4.5": "anthropic/claude-haiku-4.5",
-    "claude 3 haiku": "anthropic/claude-3-haiku",
-    "claude haiku 3": "anthropic/claude-3-haiku",
-    "haiku 3": "anthropic/claude-3-haiku",
-
-    # OpenAI GPT / reasoning / audio / OSS.
-    "gpt 5.5": "openai/gpt-5.5",
-    "gpt-5.5": "openai/gpt-5.5",
-    "openai gpt 5.5": "openai/gpt-5.5",
-    "gpt 5.5 pro": "openai/gpt-5.5-pro",
-    "gpt-5.5 pro": "openai/gpt-5.5-pro",
-    "gpt-5.5-pro": "openai/gpt-5.5-pro",
-    "openai gpt 5.5 pro": "openai/gpt-5.5-pro",
-    "gpt 5.4": "openai/gpt-5.4",
-    "gpt-5.4": "openai/gpt-5.4",
-    "gpt 5.4 pro": "openai/gpt-5.4-pro",
-    "gpt-5.4 pro": "openai/gpt-5.4-pro",
-    "gpt-5.4-pro": "openai/gpt-5.4-pro",
-    "gpt 5.4 mini": "openai/gpt-5.4-mini",
-    "gpt 5.4 nano": "openai/gpt-5.4-nano",
-    "gpt 5.4 image": "openai/gpt-5.4-image-2",
-    "gpt 5.4 image 2": "openai/gpt-5.4-image-2",
-    "gpt image 2": "openai/gpt-5.4-image-2",
-    "gpt 5.3 chat": "openai/gpt-5.3-chat",
-    "gpt-5.3 chat": "openai/gpt-5.3-chat",
-    "gpt-5.3-chat": "openai/gpt-5.3-chat",
-    "openai gpt 5.3 chat": "openai/gpt-5.3-chat",
-    "gpt 5.3 codex": "openai/gpt-5.3-codex",
-    "gpt-5.3 codex": "openai/gpt-5.3-codex",
-    "gpt-5.3-codex": "openai/gpt-5.3-codex",
-    "openai gpt 5.3 codex": "openai/gpt-5.3-codex",
-    "gpt 5.2": "openai/gpt-5.2",
-    "gpt 5.2 pro": "openai/gpt-5.2-pro",
-    "gpt 5.2 chat": "openai/gpt-5.2-chat",
-    "gpt 5.2 codex": "openai/gpt-5.2-codex",
-    "gpt 5.1": "openai/gpt-5.1",
-    "gpt 5.1 chat": "openai/gpt-5.1-chat",
-    "gpt 5.1 codex": "openai/gpt-5.1-codex",
-    "gpt 5.1 codex max": "openai/gpt-5.1-codex-max",
-    "gpt 5.1 codex mini": "openai/gpt-5.1-codex-mini",
-    "gpt 5": "openai/gpt-5",
-    "gpt-5": "openai/gpt-5",
-    "gpt 5 chat": "openai/gpt-5-chat",
-    "gpt 5 pro": "openai/gpt-5-pro",
-    "gpt 5 mini": "openai/gpt-5-mini",
-    "gpt 5 nano": "openai/gpt-5-nano",
-    "gpt 5 codex": "openai/gpt-5-codex",
-    "gpt codex": "openai/gpt-5-codex",
-    "gpt 5 image": "openai/gpt-5-image",
-    "gpt image": "openai/gpt-5-image",
-    "gpt 5 image mini": "openai/gpt-5-image-mini",
-    "gpt image mini": "openai/gpt-5-image-mini",
-    "gpt chat latest": "openai/gpt-chat-latest",
-    "chatgpt latest": "openai/gpt-chat-latest",
-    "gpt 4.1": "openai/gpt-4.1",
-    "gpt-4.1": "openai/gpt-4.1",
-    "gpt 4.1 mini": "openai/gpt-4.1-mini",
-    "gpt 4.1 nano": "openai/gpt-4.1-nano",
-    "gpt 4o": "openai/gpt-4o",
-    "gpt-4o": "openai/gpt-4o",
-    "gpt 4o mini": "openai/gpt-4o-mini",
-    "gpt-4o mini": "openai/gpt-4o-mini",
-    "gpt 4o search": "openai/gpt-4o-search-preview",
-    "gpt 4o search preview": "openai/gpt-4o-search-preview",
-    "gpt 4o mini search": "openai/gpt-4o-mini-search-preview",
-    "gpt 4o mini search preview": "openai/gpt-4o-mini-search-preview",
-    "o1": "openai/o1",
-    "o1 pro": "openai/o1-pro",
-    "o3": "openai/o3",
-    "o3 pro": "openai/o3-pro",
-    "o3 mini": "openai/o3-mini",
-    "o3 mini high": "openai/o3-mini-high",
-    "o3 deep research": "openai/o3-deep-research",
-    "o4 mini": "openai/o4-mini",
-    "o4 mini high": "openai/o4-mini-high",
-    "o4 mini deep research": "openai/o4-mini-deep-research",
-    "gpt audio": "openai/gpt-audio",
-    "openai audio": "openai/gpt-audio",
-    "gpt audio mini": "openai/gpt-audio-mini",
-    "openai audio mini": "openai/gpt-audio-mini",
-    "gpt oss 120b": "openai/gpt-oss-120b",
-    "gpt-oss 120b": "openai/gpt-oss-120b",
-    "gpt-oss-120b": "openai/gpt-oss-120b",
-    "gpt oss 120b free": "openai/gpt-oss-120b:free",
-    "gpt oss 20b": "openai/gpt-oss-20b",
-    "gpt-oss 20b": "openai/gpt-oss-20b",
-    "gpt-oss-20b": "openai/gpt-oss-20b",
-    "gpt oss 20b free": "openai/gpt-oss-20b:free",
-    "gpt oss safeguard 20b": "openai/gpt-oss-safeguard-20b",
-    "gpt-oss safeguard 20b": "openai/gpt-oss-safeguard-20b",
-
-    # Google Gemini / Gemma / Lyria.
-    "gemini 3.5 flash": "google/gemini-3.5-flash",
-    "gemini-3.5-flash": "google/gemini-3.5-flash",
-    "google gemini 3.5 flash": "google/gemini-3.5-flash",
-    "gemini 3.1 pro": "google/gemini-3.1-pro-preview",
-    "gemini 3.1 pro preview": "google/gemini-3.1-pro-preview",
-    "gemini 3.1 pro custom tools": "google/gemini-3.1-pro-preview-customtools",
-    "gemini 3.1 pro customtools": "google/gemini-3.1-pro-preview-customtools",
-    "gemini 3.1 flash lite": "google/gemini-3.1-flash-lite",
-    "gemini 3.1 flash lite preview": "google/gemini-3.1-flash-lite-preview",
-    "gemini 3 flash": "google/gemini-3-flash-preview",
-    "gemini 3 flash preview": "google/gemini-3-flash-preview",
-    "gemini 2.5 pro": "google/gemini-2.5-pro",
-    "gemini 2.5 flash": "google/gemini-2.5-flash",
-    "gemini 2.5 flash lite": "google/gemini-2.5-flash-lite",
-    "nano banana pro": "google/gemini-3-pro-image",
-    "gemini 3 pro image": "google/gemini-3-pro-image",
-    "gemini 3 pro image preview": "google/gemini-3-pro-image-preview",
-    "nano banana pro preview": "google/gemini-3-pro-image-preview",
-    "nano banana 2": "google/gemini-3.1-flash-image",
-    "gemini 3.1 flash image": "google/gemini-3.1-flash-image",
-    "nano banana 2 preview": "google/gemini-3.1-flash-image-preview",
-    "gemini 3.1 flash image preview": "google/gemini-3.1-flash-image-preview",
-    "nano banana 2 lite": "google/gemini-3.1-flash-lite-image",
-    "gemini 3.1 flash lite image": "google/gemini-3.1-flash-lite-image",
-    "nano banana": "google/gemini-2.5-flash-image",
-    "gemini 2.5 flash image": "google/gemini-2.5-flash-image",
-    "lyria": "google/lyria-3-pro-preview",
-    "lyria 3": "google/lyria-3-pro-preview",
-    "lyria pro": "google/lyria-3-pro-preview",
-    "lyria 3 pro": "google/lyria-3-pro-preview",
-    "lyria 3 pro preview": "google/lyria-3-pro-preview",
-    "google lyria": "google/lyria-3-pro-preview",
-    "google lyria 3 pro": "google/lyria-3-pro-preview",
-    "music generation": "google/lyria-3-pro-preview",
-    "song generation": "google/lyria-3-pro-preview",
-    "full song generation": "google/lyria-3-pro-preview",
-    "lyria clip": "google/lyria-3-clip-preview",
-    "lyria 3 clip": "google/lyria-3-clip-preview",
-    "lyria 3 clip preview": "google/lyria-3-clip-preview",
-    "music clip generation": "google/lyria-3-clip-preview",
-    "gemma 4 31b": "google/gemma-4-31b-it",
-    "gemma 4 31b free": "google/gemma-4-31b-it:free",
-    "gemma 4 26b": "google/gemma-4-26b-a4b-it",
-    "gemma 4 26b free": "google/gemma-4-26b-a4b-it:free",
-    "gemma 3 27b": "google/gemma-3-27b-it",
-    "gemma 3 12b": "google/gemma-3-12b-it",
-    "gemma 3 4b": "google/gemma-3-4b-it",
-
-    # xAI / Grok.
-    "grok 4.3": "x-ai/grok-4.3",
-    "grok-4.3": "x-ai/grok-4.3",
-    "xai grok 4.3": "x-ai/grok-4.3",
-    "x ai grok 4.3": "x-ai/grok-4.3",
-    "x-ai grok 4.3": "x-ai/grok-4.3",
-    "grok 4.20": "x-ai/grok-4.20",
-    "grok-4.20": "x-ai/grok-4.20",
-    "grok 4 20": "x-ai/grok-4.20",
-    "xai grok 4.20": "x-ai/grok-4.20",
-    "grok 4.20 multi agent": "x-ai/grok-4.20-multi-agent",
-    "grok 4.20 multi-agent": "x-ai/grok-4.20-multi-agent",
-    "grok 4 20 multi agent": "x-ai/grok-4.20-multi-agent",
-    "grok multi agent": "x-ai/grok-4.20-multi-agent",
-    "grok multi-agent": "x-ai/grok-4.20-multi-agent",
-    "xai grok multi agent": "x-ai/grok-4.20-multi-agent",
-    "grok build": "x-ai/grok-build-0.1",
-    "grok build 0.1": "x-ai/grok-build-0.1",
-
-    # MoonshotAI Kimi.
-    "kimi": "moonshotai/kimi-k2.6",
-    "kimi k2": "moonshotai/kimi-k2.6",
-    "kimi k2.6": "moonshotai/kimi-k2.6",
-    "kimi-k2.6": "moonshotai/kimi-k2.6",
-    "moonshot kimi k2.6": "moonshotai/kimi-k2.6",
-    "moonshotai kimi k2.6": "moonshotai/kimi-k2.6",
-    "kimi k2.7 code": "moonshotai/kimi-k2.7-code",
-    "kimi-k2.7-code": "moonshotai/kimi-k2.7-code",
-    "kimi k2 7 code": "moonshotai/kimi-k2.7-code",
-    "kimi code": "moonshotai/kimi-k2.7-code",
-    "kimi coder": "moonshotai/kimi-k2.7-code",
-    "moonshot kimi code": "moonshotai/kimi-k2.7-code",
-    "moonshotai kimi code": "moonshotai/kimi-k2.7-code",
-    "kimi k2.5": "moonshotai/kimi-k2.5",
-    "kimi k2 thinking": "moonshotai/kimi-k2-thinking",
-    "kimi thinking": "moonshotai/kimi-k2-thinking",
-    "kimi k2 0905": "moonshotai/kimi-k2-0905",
-    "kimi k2 0711": "moonshotai/kimi-k2",
-
-    # DeepSeek.
-    "deepseek v4 pro": "deepseek/deepseek-v4-pro",
-    "deepseek-v4-pro": "deepseek/deepseek-v4-pro",
-    "deepseek v4": "deepseek/deepseek-v4-pro",
-    "deepseek v4 flash": "deepseek/deepseek-v4-flash",
-    "deepseek-v4-flash": "deepseek/deepseek-v4-flash",
-    "deepseek flash": "deepseek/deepseek-v4-flash",
-    "deepseek v3.2": "deepseek/deepseek-v3.2",
-    "deepseek-v3.2": "deepseek/deepseek-v3.2",
-    "deepseek 3.2": "deepseek/deepseek-v3.2",
-    "deepseek v3.2 exp": "deepseek/deepseek-v3.2-exp",
-    "deepseek v3.2 experimental": "deepseek/deepseek-v3.2-exp",
-    "deepseek v3.1": "deepseek/deepseek-chat-v3.1",
-    "deepseek v3.1 terminus": "deepseek/deepseek-v3.1-terminus",
-    "deepseek terminus": "deepseek/deepseek-v3.1-terminus",
-    "deepseek chat": "deepseek/deepseek-chat",
-    "deepseek v3": "deepseek/deepseek-chat",
-    "deepseek r1": "deepseek/deepseek-r1-0528",
-    "deepseek r1 0528": "deepseek/deepseek-r1-0528",
-    "deepseek-r1-0528": "deepseek/deepseek-r1-0528",
-    "deepseek r1 latest": "deepseek/deepseek-r1-0528",
-    "deepseek r1 distill llama 70b": "deepseek/deepseek-r1-distill-llama-70b",
-    "deepseek distill 70b": "deepseek/deepseek-r1-distill-llama-70b",
-
-    # Mistral.
-    "mistral large": "mistralai/mistral-large-2512",
-    "mistral large 3": "mistralai/mistral-large-2512",
-    "mistral large 2512": "mistralai/mistral-large-2512",
-    "mistral medium": "mistralai/mistral-medium-3-5",
-    "mistral medium 3.5": "mistralai/mistral-medium-3-5",
-    "mistral medium 3-5": "mistralai/mistral-medium-3-5",
-    "mistral medium 3.1": "mistralai/mistral-medium-3.1",
-    "mistral small": "mistralai/mistral-small-2603",
-    "mistral small 4": "mistralai/mistral-small-2603",
-    "mistral small 2603": "mistralai/mistral-small-2603",
-    "mistral small 3.2": "mistralai/mistral-small-3.2-24b-instruct",
-    "mistral small 3.2 24b": "mistralai/mistral-small-3.2-24b-instruct",
-    "mistral small 3.1": "mistralai/mistral-small-3.1-24b-instruct",
-    "devstral": "mistralai/devstral-2512",
-    "devstral 2": "mistralai/devstral-2512",
-    "devstral 2512": "mistralai/devstral-2512",
-    "mistral devstral": "mistralai/devstral-2512",
-    "codestral": "mistralai/codestral-2508",
-    "codestral 2508": "mistralai/codestral-2508",
-    "mistral codestral": "mistralai/codestral-2508",
-    "mistral codestral 2508": "mistralai/codestral-2508",
-    "voxtral": "mistralai/voxtral-small-24b-2507",
-    "voxtral small": "mistralai/voxtral-small-24b-2507",
-    "voxtral small 24b": "mistralai/voxtral-small-24b-2507",
-    "voxtral small 24b 2507": "mistralai/voxtral-small-24b-2507",
-    "mistral voxtral": "mistralai/voxtral-small-24b-2507",
-    "audio mistral": "mistralai/voxtral-small-24b-2507",
-    "mistral audio": "mistralai/voxtral-small-24b-2507",
-    "ministral 14b": "mistralai/ministral-14b-2512",
-    "ministral 8b": "mistralai/ministral-8b-2512",
-    "ministral 3b": "mistralai/ministral-3b-2512",
-    "mistral nemo": "mistralai/mistral-nemo",
-    "mistral saba": "mistralai/mistral-saba",
-    "mixtral 8x22b": "mistralai/mixtral-8x22b-instruct",
-
-    # Qwen.
-    "qwen 3.7 max": "qwen/qwen3.7-max",
-    "qwen3.7 max": "qwen/qwen3.7-max",
-    "qwen3.7-max": "qwen/qwen3.7-max",
-    "qwen 3 7 max": "qwen/qwen3.7-max",
-    "qwen max latest": "qwen/qwen3.7-max",
-    "qwen 3.7 plus": "qwen/qwen3.7-plus",
-    "qwen3.7 plus": "qwen/qwen3.7-plus",
-    "qwen3.7-plus": "qwen/qwen3.7-plus",
-    "qwen 3 7 plus": "qwen/qwen3.7-plus",
-    "qwen plus latest": "qwen/qwen3.7-plus",
-    "qwen 3.6 max": "qwen/qwen3.6-max-preview",
-    "qwen 3.6 max preview": "qwen/qwen3.6-max-preview",
-    "qwen3.6 max preview": "qwen/qwen3.6-max-preview",
-    "qwen 3.6 plus": "qwen/qwen3.6-plus",
-    "qwen3.6 plus": "qwen/qwen3.6-plus",
-    "qwen 3.6 flash": "qwen/qwen3.6-flash",
-    "qwen3.6 flash": "qwen/qwen3.6-flash",
-    "qwen 3.6 35b": "qwen/qwen3.6-35b-a3b",
-    "qwen 3.6 35b a3b": "qwen/qwen3.6-35b-a3b",
-    "qwen 3.6 27b": "qwen/qwen3.6-27b",
-    "qwen 3.5 plus": "qwen/qwen3.5-plus-20260420",
-    "qwen 3.5 flash": "qwen/qwen3.5-flash-02-23",
-    "qwen 3.5 397b": "qwen/qwen3.5-397b-a17b",
-    "qwen 3 max": "qwen/qwen3-max",
-    "qwen3 max": "qwen/qwen3-max",
-    "qwen max": "qwen/qwen3-max",
-    "qwen 3 max thinking": "qwen/qwen3-max-thinking",
-    "qwen max thinking": "qwen/qwen3-max-thinking",
-    "qwen coder": "qwen/qwen3-coder",
-    "qwen 3 coder": "qwen/qwen3-coder",
-    "qwen3 coder": "qwen/qwen3-coder",
-    "qwen3-coder": "qwen/qwen3-coder",
-    "qwen coder free": "qwen/qwen3-coder:free",
-    "qwen 3 coder free": "qwen/qwen3-coder:free",
-    "qwen coder plus": "qwen/qwen3-coder-plus",
-    "qwen3 coder plus": "qwen/qwen3-coder-plus",
-    "qwen coder flash": "qwen/qwen3-coder-flash",
-    "qwen3 coder flash": "qwen/qwen3-coder-flash",
-    "qwen coder next": "qwen/qwen3-coder-next",
-    "qwen3 coder next": "qwen/qwen3-coder-next",
-    "qwen vl": "qwen/qwen3-vl-235b-a22b-instruct",
-    "qwen3 vl": "qwen/qwen3-vl-235b-a22b-instruct",
-    "qwen 3 vl": "qwen/qwen3-vl-235b-a22b-instruct",
-    "qwen3 vl 235b": "qwen/qwen3-vl-235b-a22b-instruct",
-    "qwen3 vl 235b thinking": "qwen/qwen3-vl-235b-a22b-thinking",
-    "qwen3 vl 30b": "qwen/qwen3-vl-30b-a3b-instruct",
-    "qwen3 vl 30b thinking": "qwen/qwen3-vl-30b-a3b-thinking",
-    "qwen plus": "qwen/qwen-plus",
-
-    # Meta Llama.
-    "llama 4 maverick": "meta-llama/llama-4-maverick",
-    "llama maverick": "meta-llama/llama-4-maverick",
-    "meta llama 4 maverick": "meta-llama/llama-4-maverick",
-    "llama 4 scout": "meta-llama/llama-4-scout",
-    "llama scout": "meta-llama/llama-4-scout",
-    "meta llama 4 scout": "meta-llama/llama-4-scout",
-    "llama guard 4": "meta-llama/llama-guard-4-12b",
-    "llama guard 4 12b": "meta-llama/llama-guard-4-12b",
-    "llama 3.3 70b": "meta-llama/llama-3.3-70b-instruct",
-    "llama 3.3 70b instruct": "meta-llama/llama-3.3-70b-instruct",
-    "llama 3.3 70b free": "meta-llama/llama-3.3-70b-instruct:free",
-    "llama 3.2 vision": "meta-llama/llama-3.2-11b-vision-instruct",
-    "llama 3.2 11b vision": "meta-llama/llama-3.2-11b-vision-instruct",
-    "llama 3.2 3b": "meta-llama/llama-3.2-3b-instruct",
-    "llama 3.2 3b free": "meta-llama/llama-3.2-3b-instruct:free",
-    "llama 3.1 70b": "meta-llama/llama-3.1-70b-instruct",
-    "llama 3.1 8b": "meta-llama/llama-3.1-8b-instruct",
-
-    # Perplexity.
-    "sonar": "perplexity/sonar",
-    "perplexity sonar": "perplexity/sonar",
-    "sonar pro": "perplexity/sonar-pro",
-    "perplexity sonar pro": "perplexity/sonar-pro",
-    "sonar pro search": "perplexity/sonar-pro-search",
-    "perplexity sonar pro search": "perplexity/sonar-pro-search",
-    "sonar deep research": "perplexity/sonar-deep-research",
-    "perplexity deep research": "perplexity/sonar-deep-research",
-    "sonar reasoning pro": "perplexity/sonar-reasoning-pro",
-
-    # Routers.
-    "auto": "openrouter/auto",
-    "auto router": "openrouter/auto",
-    "openrouter auto": "openrouter/auto",
-    "free router": "openrouter/free",
-    "openrouter free": "openrouter/free",
-    "free models": "openrouter/free",
-    "fusion": "openrouter/fusion",
-    "openrouter fusion": "openrouter/fusion",
-    "pareto code": "openrouter/pareto-code",
-    "pareto code router": "openrouter/pareto-code",
-    "openrouter pareto code": "openrouter/pareto-code",
-
-    # Other high-value/provider aliases.
-    "command a": "cohere/command-a",
-    "cohere command a": "cohere/command-a",
-    "command r": "cohere/command-r-08-2024",
-    "command r plus": "cohere/command-r-plus-08-2024",
-    "nova 2 lite": "amazon/nova-2-lite-v1",
-    "nova premier": "amazon/nova-premier-v1",
-    "nova pro": "amazon/nova-pro-v1",
-    "nova lite": "amazon/nova-lite-v1",
-    "nova micro": "amazon/nova-micro-v1",
-    "minimax m3": "minimax/minimax-m3",
-    "minimax m2.7": "minimax/minimax-m2.7",
-    "minimax m2.5": "minimax/minimax-m2.5",
-    "minimax m2.1": "minimax/minimax-m2.1",
-    "glm 5.2": "z-ai/glm-5.2",
-    "glm 5.1": "z-ai/glm-5.1",
-    "glm 5": "z-ai/glm-5",
-    "glm 5 turbo": "z-ai/glm-5-turbo",
-    "glm 5v turbo": "z-ai/glm-5v-turbo",
-    "glm 4.7": "z-ai/glm-4.7",
-    "glm 4.7 flash": "z-ai/glm-4.7-flash",
-    "glm 4.6": "z-ai/glm-4.6",
-    "glm 4.6v": "z-ai/glm-4.6v",
-    "glm 4.5": "z-ai/glm-4.5",
-    "glm 4.5 air": "z-ai/glm-4.5-air",
-    "glm 4.5v": "z-ai/glm-4.5v",
-    "nemotron 3 ultra": "nvidia/nemotron-3-ultra-550b-a55b",
-    "nemotron 3 super": "nvidia/nemotron-3-super-120b-a12b",
-    "nemotron 3 nano": "nvidia/nemotron-3-nano-30b-a3b",
-    "hermes 4 405b": "nousresearch/hermes-4-405b",
-    "hermes 4 70b": "nousresearch/hermes-4-70b",
-    "hermes 3 405b": "nousresearch/hermes-3-llama-3.1-405b",
-    "hermes 3 70b": "nousresearch/hermes-3-llama-3.1-70b",
-    "solar pro 3": "upstage/solar-pro-3",
-    "palmyra x5": "writer/palmyra-x5",
-    "laguna m1": "poolside/laguna-m.1",
-    "laguna m.1": "poolside/laguna-m.1",
-    "laguna xs2": "poolside/laguna-xs.2",
-    "laguna xs.2": "poolside/laguna-xs.2",
-    "fugu ultra": "sakana/fugu-ultra",
-    "sakana fugu ultra": "sakana/fugu-ultra",
-    "fugu": "sakana/fugu-ultra",
-    "sakana fugu": "sakana/fugu-ultra",
-    "step 3.7 flash": "stepfun/step-3.7-flash",
-    "stepfun 3.7 flash": "stepfun/step-3.7-flash",
-    "step 3.5 flash": "stepfun/step-3.5-flash",
-    "stepfun 3.5 flash": "stepfun/step-3.5-flash",
-    "bodybuilder": "openrouter/bodybuilder",
-    "openrouter bodybuilder": "openrouter/bodybuilder",
-    # gpt-image-2: served via media endpoint, not in /models, but slug is valid
-    "gpt image 2": "openai/gpt-image-2",
-    "openai gpt image 2": "openai/gpt-image-2",
-    "gpt-image-2": "openai/gpt-image-2",
-}
 
 TILDE_MODELS: List[str] = [
     "~anthropic/claude-sonnet-latest",
@@ -705,6 +213,154 @@ TILDE_MODELS: List[str] = [
     "~moonshotai/kimi-latest",
 ]
 
+CURATED_ALIASES: Dict[str, str] = {
+    "claude sonnet latest": "~anthropic/claude-sonnet-latest",
+    "latest sonnet": "~anthropic/claude-sonnet-latest",
+    "sonnet latest": "~anthropic/claude-sonnet-latest",
+    "claude opus latest": "~anthropic/claude-opus-latest",
+    "opus latest": "~anthropic/claude-opus-latest",
+    "claude haiku latest": "~anthropic/claude-haiku-latest",
+    "haiku latest": "~anthropic/claude-haiku-latest",
+    "claude fable latest": "~anthropic/claude-fable-latest",
+    "fable latest": "~anthropic/claude-fable-latest",
+    "gemini flash latest": "~google/gemini-flash-latest",
+    "gemini pro latest": "~google/gemini-pro-latest",
+    "gpt latest": "~openai/gpt-latest",
+    "gpt mini latest": "~openai/gpt-mini-latest",
+    "kimi latest": "~moonshotai/kimi-latest",
+
+    "claude sonnet 5": "anthropic/claude-sonnet-5",
+    "sonnet 5": "anthropic/claude-sonnet-5",
+    "claude fable 5": "anthropic/claude-fable-5",
+    "fable 5": "anthropic/claude-fable-5",
+    "claude mythos": "anthropic/claude-fable-5",
+    "claude opus 4.8": "anthropic/claude-opus-4.8",
+    "opus 4.8": "anthropic/claude-opus-4.8",
+    "opus fast": "anthropic/claude-opus-4.8-fast",
+    "claude sonnet 4.6": "anthropic/claude-sonnet-4.6",
+    "sonnet 4.6": "anthropic/claude-sonnet-4.6",
+    "claude haiku 4.5": "anthropic/claude-haiku-4.5",
+    "haiku 4.5": "anthropic/claude-haiku-4.5",
+
+    "gpt 5.5": "openai/gpt-5.5",
+    "gpt 5.5 pro": "openai/gpt-5.5-pro",
+    "gpt 5.4": "openai/gpt-5.4",
+    "gpt 5.4 pro": "openai/gpt-5.4-pro",
+    "gpt 5.4 mini": "openai/gpt-5.4-mini",
+    "gpt 5.4 image 2": "openai/gpt-5.4-image-2",
+    "gpt 5": "openai/gpt-5",
+    "gpt 5 chat": "openai/gpt-5-chat",
+    "gpt 5 pro": "openai/gpt-5-pro",
+    "gpt 5 mini": "openai/gpt-5-mini",
+    "gpt codex": "openai/gpt-5-codex",
+    "gpt chat latest": "openai/gpt-chat-latest",
+    "chatgpt latest": "openai/gpt-chat-latest",
+    "gpt 4.1": "openai/gpt-4.1",
+    "gpt 4.1 mini": "openai/gpt-4.1-mini",
+    "o1": "openai/o1",
+    "o1 pro": "openai/o1-pro",
+    "o3": "openai/o3",
+    "o3 pro": "openai/o3-pro",
+    "o4 mini": "openai/o4-mini",
+    "gpt audio": "openai/gpt-audio",
+    "gpt audio mini": "openai/gpt-audio-mini",
+    "gpt image 2": "openai/gpt-image-2",
+    "openai gpt image 2": "openai/gpt-image-2",
+
+    "gemini 3.5 flash": "google/gemini-3.5-flash",
+    "gemini 3.1 pro": "google/gemini-3.1-pro-preview",
+    "gemini 3.1 pro preview": "google/gemini-3.1-pro-preview",
+    "gemini 3.1 flash lite": "google/gemini-3.1-flash-lite",
+    "gemini 3 flash": "google/gemini-3-flash-preview",
+    "gemini 2.5 pro": "google/gemini-2.5-pro",
+    "gemini 2.5 flash": "google/gemini-2.5-flash",
+    "gemini 2.5 flash lite": "google/gemini-2.5-flash-lite",
+    "nano banana pro": "google/gemini-3-pro-image",
+    "gemini 3 pro image": "google/gemini-3-pro-image",
+    "nano banana 2": "google/gemini-3.1-flash-image",
+    "gemini 3.1 flash image": "google/gemini-3.1-flash-image",
+    "nano banana 2 lite": "google/gemini-3.1-flash-lite-image",
+    "nano banana": "google/gemini-2.5-flash-image",
+    "lyria": "google/lyria-3-pro-preview",
+    "lyria pro": "google/lyria-3-pro-preview",
+    "lyria clip": "google/lyria-3-clip-preview",
+    "music generation": "google/lyria-3-pro-preview",
+
+    "sonar": "perplexity/sonar",
+    "sonar pro": "perplexity/sonar-pro",
+    "sonar pro search": "perplexity/sonar-pro-search",
+    "sonar deep research": "perplexity/sonar-deep-research",
+    "sonar reasoning pro": "perplexity/sonar-reasoning-pro",
+
+    "llama 4 maverick": "meta-llama/llama-4-maverick",
+    "llama 4 scout": "meta-llama/llama-4-scout",
+    "llama 3.3 70b": "meta-llama/llama-3.3-70b-instruct",
+
+    "deepseek v4 pro": "deepseek/deepseek-v4-pro",
+    "deepseek v4 flash": "deepseek/deepseek-v4-flash",
+    "deepseek v4": "deepseek/deepseek-v4-pro",
+    "deepseek v3.2": "deepseek/deepseek-v3.2",
+    "deepseek r1": "deepseek/deepseek-r1-0528",
+    "deepseek r1 0528": "deepseek/deepseek-r1-0528",
+
+    "kimi": "moonshotai/kimi-k2.6",
+    "kimi k2": "moonshotai/kimi-k2.6",
+    "kimi k2.6": "moonshotai/kimi-k2.6",
+    "kimi code": "moonshotai/kimi-k2.7-code",
+    "kimi k2.7 code": "moonshotai/kimi-k2.7-code",
+    "kimi thinking": "moonshotai/kimi-k2-thinking",
+
+    "mistral large": "mistralai/mistral-large-2512",
+    "mistral medium": "mistralai/mistral-medium-3-5",
+    "mistral medium 3.5": "mistralai/mistral-medium-3-5",
+    "devstral": "mistralai/devstral-2512",
+    "codestral": "mistralai/codestral-2508",
+    "voxtral": "mistralai/voxtral-small-24b-2507",
+
+    "grok 4.3": "x-ai/grok-4.3",
+    "grok 4.20": "x-ai/grok-4.20",
+    "grok 4.20 multi agent": "x-ai/grok-4.20-multi-agent",
+    "grok multi agent": "x-ai/grok-4.20-multi-agent",
+
+    "qwen 3.7 max": "qwen/qwen3.7-max",
+    "qwen max latest": "qwen/qwen3.7-max",
+    "qwen 3.7 plus": "qwen/qwen3.7-plus",
+    "qwen plus latest": "qwen/qwen3.7-plus",
+    "qwen coder": "qwen/qwen3-coder",
+    "qwen coder free": "qwen/qwen3-coder:free",
+    "qwen max thinking": "qwen/qwen3-max-thinking",
+
+    "fugu": "sakana/fugu-ultra",
+    "fugu ultra": "sakana/fugu-ultra",
+    "glm 5.2": "z-ai/glm-5.2",
+    "nemotron 3 ultra": "nvidia/nemotron-3-ultra-550b-a55b",
+    "laguna xs 2.1": "poolside/laguna-xs-2.1",
+    "laguna xs2": "poolside/laguna-xs-2.1",
+
+    "auto": "openrouter/auto",
+    "openrouter auto": "openrouter/auto",
+    "free router": "openrouter/free",
+    "fusion": "openrouter/fusion",
+    "pareto code": "openrouter/pareto-code",
+
+    "seedream": "bytedance-seed/seedream-4.5",
+    "seedream 4.5": "bytedance-seed/seedream-4.5",
+    "veo 3.1": "google/veo-3.1",
+    "veo 3.1 fast": "google/veo-3.1-fast",
+    "seedance 2": "bytedance/seedance-2.0",
+    "seedance 2 fast": "bytedance/seedance-2.0-fast",
+    "gemini tts": "google/gemini-3.1-flash-tts-preview",
+}
+
+KNOWN_NOT_LIVE_RAW: Dict[str, str] = {
+    "anthropic/claude-sonnet-latest": "Use ~anthropic/claude-sonnet-latest (tilde prefix required)",
+    "anthropic/claude-opus-latest": "Use ~anthropic/claude-opus-latest (tilde prefix required)",
+    "anthropic/claude-haiku-latest": "Use ~anthropic/claude-haiku-latest (tilde prefix required)",
+    "anthropic/claude-fable-latest": "Use ~anthropic/claude-fable-latest (tilde prefix required)",
+    "google/gemini-flash-latest": "Use ~google/gemini-flash-latest (tilde prefix required)",
+    "google/gemini-pro-latest": "Use ~google/gemini-pro-latest (tilde prefix required)",
+    "openai/gpt-latest": "Use ~openai/gpt-latest (tilde prefix required)",
+}
 
 
 def tokenize(text: str, remove_stop: bool = True, expand_decimals: bool = True) -> List[str]:
@@ -723,70 +379,58 @@ def tokenize(text: str, remove_stop: bool = True, expand_decimals: bool = True) 
 
 
 def simple_key(text: str) -> str:
-    """Normalize text to a lookup key: lowercase, tokenize, join with spaces."""
     return " ".join(tokenize(text, remove_stop=True, expand_decimals=True))
+
+
 def canonical(text: str) -> str:
     return re.sub(r"[^a-z0-9]", "", text.lower())
 
-# Known-not-live stubs (deprecated slugs with helpful redirect messages)
-# Confirmed-valid slugs served via media endpoints (not in /api/v1/models)
-# These are real OpenRouter slugs but use /api/v1/images, /api/v1/videos, /api/v1/audio/speech
-KNOWN_MEDIA_SLUGS: Dict[str, str] = {
-    "openai/gpt-image-2": "images",
-    "openai/gpt-image-1": "images",
-    "openai/gpt-image-1-mini": "images",
-    "openai/gpt-5.4-image-2": "chat",  # hybrid: chat completions with image output
-    "google/gemini-3-pro-image": "chat",
-    "google/gemini-3-pro-image-preview": "chat",
-    "google/gemini-3.1-flash-image": "chat",
-    "google/gemini-3.1-flash-image-preview": "chat",
-    "google/gemini-3.1-flash-lite-image": "chat",
-    "google/gemini-2.5-flash-image": "chat",
-    "bytedance-seed/seedream-4.5": "images",
-    "google/veo-3.1": "videos",
-    "google/veo-3.1-fast": "videos",
-    "bytedance/seedance-2.0": "videos",
-    "bytedance/seedance-2.0-fast": "videos",
-    "google/gemini-3.1-flash-tts-preview": "audio/speech",
-}
 
-KNOWN_NOT_LIVE_RAW: Dict[str, str] = {
-    "anthropic/claude-sonnet-latest": "Use ~anthropic/claude-sonnet-latest (tilde prefix required)",
-    "anthropic/claude-opus-latest": "Use ~anthropic/claude-opus-latest (tilde prefix required)",
-    "anthropic/claude-haiku-latest": "Use ~anthropic/claude-haiku-latest (tilde prefix required)",
-    "google/gemini-flash-latest": "Use ~google/gemini-flash-latest (tilde prefix required)",
-    "google/gemini-pro-latest": "Use ~google/gemini-pro-latest (tilde prefix required)",
-    "openai/gpt-latest": "Use ~openai/gpt-latest (tilde prefix required)",
-}
 EXACT_ALIASES = {simple_key(k): v for k, v in CURATED_ALIASES.items()}
-LATEST_ALIASES = {simple_key(m.split('/', 1)[1].replace('-', ' ').replace('.', ' ')): m for m in TILDE_MODELS}
+LATEST_ALIASES = {simple_key(m.split("/", 1)[1].replace("-", " ").replace(".", " ")): m for m in TILDE_MODELS}
 KNOWN_NOT_LIVE = {simple_key(k): v for k, v in KNOWN_NOT_LIVE_RAW.items()}
 
 
+def split_suffix_chain(suffix: Optional[str]) -> List[str]:
+    if not suffix:
+        return []
+    return [s.lower() for s in suffix.split(":") if s]
+
+
+def split_model_suffixes(model_id: str) -> Tuple[str, List[str]]:
+    parts = model_id.split(":")
+    if len(parts) == 1:
+        return model_id, []
+    suffixes = [p.lower() for p in parts[1:]]
+    if all(s in KNOWN_SUFFIXES for s in suffixes):
+        return parts[0], suffixes
+    return model_id, []
+
 
 def strip_model_suffix(model_id: str) -> Tuple[str, Optional[str]]:
-    if ":" in model_id:
-        base, suffix = model_id.rsplit(":", 1)
-        if suffix.lower() in KNOWN_SUFFIXES:
-            return base, suffix.lower()
-    return model_id, None
+    base, suffixes = split_model_suffixes(model_id)
+    return base, ":".join(suffixes) if suffixes else None
 
 
 def apply_suffix(model_id: str, suffix: Optional[str]) -> str:
-    if not suffix:
+    requested = split_suffix_chain(suffix)
+    if not requested:
         return model_id
-    base, old = strip_model_suffix(model_id)
-    if old == suffix:
-        return model_id
-    return f"{base}:{suffix}"
+    base, existing = split_model_suffixes(model_id)
+    suffixes = existing[:]
+    for s in requested:
+        if s not in suffixes:
+            suffixes.append(s)
+    return base + "".join(f":{s}" for s in suffixes)
 
 
 def parse_slug_like(text: str) -> Optional[Tuple[str, Optional[str]]]:
     t = text.strip()
-    m = re.fullmatch(r"(~?[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)(?::([A-Za-z][A-Za-z0-9_-]*))?", t)
+    m = re.fullmatch(r"(~?[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)((?::[A-Za-z][A-Za-z0-9_-]*)*)", t)
     if not m:
         return None
-    return m.group(1), (m.group(2).lower() if m.group(2) else None)
+    raw_suffix = m.group(2).lstrip(":")
+    return m.group(1), raw_suffix.replace(":", ":").lower() if raw_suffix else None
 
 
 def cache_file() -> str:
@@ -815,7 +459,7 @@ def write_cache(models: List[Dict[str, Any]]) -> None:
 
 
 def fetch_live_models() -> List[Dict[str, Any]]:
-    headers = {"User-Agent": "openrouter-caller-resolver/4.0"}
+    headers = {"User-Agent": "openrouter-caller-resolver/4.1"}
     key = os.environ.get("OPENROUTER_API_KEY")
     if key:
         headers["Authorization"] = f"Bearer {key}"
@@ -840,18 +484,21 @@ def normalize_model(m: Dict[str, Any], source_name: str) -> Dict[str, Any]:
 
 
 def merge_models(primary: Iterable[Dict[str, Any]], extras: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    primary_list = list(primary)
     merged: Dict[str, Dict[str, Any]] = {}
-    for source_name, seq in (("live", primary), ("static", extras)):
-        for m in seq:
-            mid = m.get("id")
-            if not mid:
-                continue
-            item = normalize_model(m, source_name)
-            if mid not in merged:
-                merged[mid] = item
-            elif source_name == "live":
-                merged[mid].update(item)
-                merged[mid]["_source"] = "live"
+    for m in primary_list:
+        mid = m.get("id")
+        if mid:
+            merged[mid] = normalize_model(m, "live_or_cache")
+
+    # When live/cache data exists, only add static media exceptions.
+    include_all_static = not bool(primary_list)
+    for m in extras:
+        mid = m.get("id")
+        if not mid:
+            continue
+        if include_all_static or mid in KNOWN_MEDIA_SLUGS:
+            merged.setdefault(mid, normalize_model(m, "static"))
     return list(merged.values())
 
 
@@ -860,8 +507,8 @@ def load_models(force_refresh: bool = False, offline: bool = False) -> Tuple[Lis
     cache_fresh = bool(cache and (time.time() - float(cache.get("fetched_at", 0))) < CACHE_TTL_SECONDS)
 
     if offline:
-        cached_models = cache.get("models", []) if cache else []
-        return merge_models(cached_models, FALLBACK_MODELS), {"live_ok": False, "cache_used": bool(cache), "source": "offline"}
+        cached = cache.get("models", []) if cache else []
+        return merge_models(cached, FALLBACK_MODELS), {"live_ok": False, "cache_used": bool(cache), "source": "offline"}
 
     if cache_fresh and not force_refresh:
         return merge_models(cache.get("models", []), FALLBACK_MODELS), {"live_ok": False, "cache_used": True, "source": "fresh_cache"}
@@ -871,8 +518,8 @@ def load_models(force_refresh: bool = False, offline: bool = False) -> Tuple[Lis
         write_cache(live)
         return merge_models(live, FALLBACK_MODELS), {"live_ok": True, "cache_used": False, "source": "live"}
     except Exception as e:
-        cached_models = cache.get("models", []) if cache else []
-        return merge_models(cached_models, FALLBACK_MODELS), {
+        cached = cache.get("models", []) if cache else []
+        return merge_models(cached, FALLBACK_MODELS), {
             "live_ok": False,
             "cache_used": bool(cache),
             "source": "cache_or_static",
@@ -882,11 +529,10 @@ def load_models(force_refresh: bool = False, offline: bool = False) -> Tuple[Lis
 
 def extract_suffix(query: str) -> Tuple[str, Optional[str]]:
     pattern = r":(" + "|".join(sorted(KNOWN_SUFFIXES)) + r")\b"
-    m = re.search(pattern, query.lower())
-    if m:
-        suffix = m.group(1)
+    matches = re.findall(pattern, query.lower())
+    if matches:
         cleaned = re.sub(pattern, " ", query, flags=re.IGNORECASE)
-        return cleaned, suffix
+        return cleaned, ":".join(matches)
 
     raw_key = simple_key(query)
     if raw_key in EXACT_ALIASES:
@@ -897,7 +543,7 @@ def extract_suffix(query: str) -> Tuple[str, Optional[str]]:
         return query, None
     suffix: Optional[str] = None
     last = toks[-1]
-    if last in {"nitro", "floor", "exacto", "online", "free", "extended", "thinking"}:
+    if last in KNOWN_SUFFIXES:
         suffix = last
     elif "free" in toks and "tier" in toks:
         suffix = "free"
@@ -999,20 +645,20 @@ def score_model(query: str, model: Dict[str, Any], requested_suffix: Optional[st
     if q_decimals and cand_decimals and q_decimals.isdisjoint(cand_decimals):
         score -= 80
 
-    if suffix:
-        if requested_suffix == suffix:
+    requested_suffixes = set(split_suffix_chain(requested_suffix))
+    candidate_suffixes = set(split_suffix_chain(suffix))
+    if candidate_suffixes:
+        if requested_suffixes and requested_suffixes.issubset(candidate_suffixes):
             score += 80
-        elif not requested_suffix:
+        elif not requested_suffixes:
             score -= 45
-    if requested_suffix and not suffix:
+    if requested_suffixes and not candidate_suffixes:
         score += 5
 
     if "preview" in candidate_tokens and "preview" not in q_set:
         score -= 12
-
     if provider == "openrouter" and not ({"openrouter", "auto", "free", "fusion", "router", "pareto"} & q_set):
         score -= 60
-
     if latest_mode:
         score += 60 if mid.startswith("~") else -70
 
@@ -1044,8 +690,7 @@ def is_ambiguous(results: List[Dict[str, Any]]) -> bool:
         return False
     top = int(results[0]["_score"])
     second = int(results[1]["_score"])
-    gap = top - second
-    return gap <= max(AMBIGUITY_MIN_GAP, int(top * AMBIGUITY_RATIO))
+    return (top - second) <= max(AMBIGUITY_MIN_GAP, int(top * AMBIGUITY_RATIO))
 
 
 def find_model(model_id: str, models: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -1053,6 +698,14 @@ def find_model(model_id: str, models: List[Dict[str, Any]]) -> Optional[Dict[str
         if m.get("id") == model_id:
             return m
     return None
+
+
+def suffixes_valid(suffix: Optional[str]) -> bool:
+    return all(s in KNOWN_SUFFIXES for s in split_suffix_chain(suffix))
+
+
+def online_warning(suffix: Optional[str]) -> List[str]:
+    return [":online is deprecated; prefer OpenRouter web_search tooling when available."] if "online" in split_suffix_chain(suffix) else []
 
 
 def resolve(query: str, models: List[Dict[str, Any]], meta: Dict[str, Any], top_n: int = 8) -> Dict[str, Any]:
@@ -1065,24 +718,29 @@ def resolve(query: str, models: List[Dict[str, Any]], meta: Dict[str, Any], top_
 
     if parsed:
         base, suffix = parsed
-        if suffix and suffix not in KNOWN_SUFFIXES:
+        if not suffixes_valid(suffix):
             return {
                 "status": "ERROR",
                 "error": "unknown_suffix",
-                "message": f"Unknown suffix :{suffix}. Known: {', '.join(sorted(KNOWN_SUFFIXES))}",
+                "message": f"Unknown suffix in :{suffix}. Known: {', '.join(sorted(KNOWN_SUFFIXES))}",
             }
 
         full = apply_suffix(base, suffix)
-        if full in ids or (base in ids and (suffix in KNOWN_SUFFIXES or suffix is None)):
-            m = find_model(full, models) or find_model(base, models) or {"id": full, "name": full}
-            return {"status": "OK", "resolution": "validated_slug", "use_slug": full, "model": m, "warnings": []}
+        full_model = find_model(full, models)
+        base_model = find_model(base, models)
+        if full_model or base_model:
+            m = full_model or base_model or {"id": full, "name": full}
+            warnings = online_warning(suffix)
+            if full.startswith("~"):
+                warnings.append("Tilde latest-alias: target model may change over time.")
+            return {"status": "OK", "resolution": "validated_slug", "use_slug": full, "model": m, "warnings": warnings}
 
-        # Check if it's a confirmed media-endpoint slug (not in /models but still valid)
         if base in KNOWN_MEDIA_SLUGS:
             endpoint = KNOWN_MEDIA_SLUGS[base]
-            m = {"id": full, "name": full}
+            m = {"id": full, "name": full, "endpoint": endpoint}
             warnings = [f"Media-endpoint model: use /api/v1/{endpoint} (not /api/v1/chat/completions)."]
-            return {"status": "OK", "resolution": "known_media_slug", "use_slug": full, "model": m, "endpoint_hint": endpoint, "warnings": warnings}
+            warnings.extend(online_warning(suffix))
+            return {"status": "OK", "resolution": "known_media_slug", "use_slug": full, "model": m, "warnings": warnings}
 
         if not base.startswith("~") and base.endswith("-latest") and ("~" + base) in ids:
             corrected = apply_suffix("~" + base, suffix)
@@ -1092,7 +750,7 @@ def resolve(query: str, models: List[Dict[str, Any]], meta: Dict[str, Any], top_
                 "resolution": "corrected_tilde_latest",
                 "use_slug": corrected,
                 "model": m,
-                "warnings": ["Added required '~' prefix for OpenRouter latest-alias slug."],
+                "warnings": ["Added required '~' prefix for OpenRouter latest-alias slug."] + online_warning(suffix),
             }
 
         if not meta.get("live_ok") and not meta.get("cache_used"):
@@ -1101,30 +759,23 @@ def resolve(query: str, models: List[Dict[str, Any]], meta: Dict[str, Any], top_
                 "resolution": "slug_passthrough_no_live_models",
                 "use_slug": full,
                 "model": {"id": full, "name": full},
-                "warnings": ["Could not fetch/validate model list; exact-looking slug passed through unverified."],
+                "warnings": ["Could not fetch/validate model list; exact-looking slug passed through unverified."] + online_warning(suffix),
             }
 
-        suggestions = rank(base.replace("/", " "), models, suffix, latest_mode=False, top_n=5)
         return {
             "status": "ERROR",
             "error": "invalid_slug",
             "message": f"Slug is not in the current OpenRouter model list: {full}",
-            "candidates": suggestions,
+            "candidates": rank(base.replace("/", " "), models, suffix, latest_mode=False, top_n=5),
         }
 
     raw_key = simple_key(query)
-
     if raw_key in KNOWN_NOT_LIVE:
-        return {
-            "status": "ERROR",
-            "error": "known_not_live",
-            "message": KNOWN_NOT_LIVE[raw_key],
-            "candidates": [],
-        }
+        return {"status": "ERROR", "error": "known_not_live", "message": KNOWN_NOT_LIVE[raw_key], "candidates": []}
 
     if raw_key in EXACT_ALIASES:
         slug = EXACT_ALIASES[raw_key]
-        m = find_model(slug, models) or {"id": slug, "name": slug}
+        m = find_model(slug, models) or {"id": slug, "name": slug, "endpoint": KNOWN_MEDIA_SLUGS.get(slug)}
         return {"status": "OK", "resolution": "curated_alias", "use_slug": slug, "model": m, "warnings": []}
 
     if raw_key in LATEST_ALIASES:
@@ -1142,30 +793,31 @@ def resolve(query: str, models: List[Dict[str, Any]], meta: Dict[str, Any], top_
     clean_key = simple_key(cleaned_query)
 
     if clean_key in KNOWN_NOT_LIVE:
-        return {
-            "status": "ERROR",
-            "error": "known_not_live",
-            "message": KNOWN_NOT_LIVE[clean_key],
-            "candidates": [],
-        }
+        return {"status": "ERROR", "error": "known_not_live", "message": KNOWN_NOT_LIVE[clean_key], "candidates": []}
 
     if clean_key in EXACT_ALIASES:
         slug = apply_suffix(EXACT_ALIASES[clean_key], requested_suffix)
         base, _ = strip_model_suffix(slug)
-        m = find_model(slug, models) or find_model(base, models) or {"id": slug, "name": slug}
-        warnings = []
-        if requested_suffix == "online":
-            warnings.append(":online is deprecated; prefer OpenRouter web_search tooling when available.")
-        return {"status": "OK", "resolution": "curated_alias_plus_suffix", "use_slug": slug, "model": m, "warnings": warnings}
+        m = find_model(slug, models) or find_model(base, models) or {"id": slug, "name": slug, "endpoint": KNOWN_MEDIA_SLUGS.get(base)}
+        return {
+            "status": "OK",
+            "resolution": "curated_alias_plus_suffix",
+            "use_slug": slug,
+            "model": m,
+            "warnings": online_warning(requested_suffix),
+        }
 
     if clean_key in LATEST_ALIASES:
         slug = apply_suffix(LATEST_ALIASES[clean_key], requested_suffix)
         base, _ = strip_model_suffix(slug)
         m = find_model(base, models) or {"id": slug, "name": slug}
-        warnings = ["Tilde latest-alias: target model may change over time."]
-        if requested_suffix == "online":
-            warnings.append(":online is deprecated; prefer OpenRouter web_search tooling when available.")
-        return {"status": "OK", "resolution": "curated_latest_alias_plus_suffix", "use_slug": slug, "model": m, "warnings": warnings}
+        return {
+            "status": "OK",
+            "resolution": "curated_latest_alias_plus_suffix",
+            "use_slug": slug,
+            "model": m,
+            "warnings": ["Tilde latest-alias: target model may change over time."] + online_warning(requested_suffix),
+        }
 
     latest_mode = "latest" in tokenize(query, remove_stop=False, expand_decimals=False)
     results = rank(cleaned_query, models, requested_suffix, latest_mode=latest_mode, top_n=top_n)
@@ -1178,9 +830,7 @@ def resolve(query: str, models: List[Dict[str, Any]], meta: Dict[str, Any], top_
             "candidates": results,
         }
 
-    warnings: List[str] = []
-    if requested_suffix == "online":
-        warnings.append(":online is deprecated; prefer OpenRouter web_search tooling when available.")
+    warnings = online_warning(requested_suffix)
     if latest_mode and results[0].get("id", "").startswith("~"):
         warnings.append("Tilde latest-alias: target model may change over time.")
 
@@ -1210,9 +860,8 @@ def emit_text(res: Dict[str, Any], meta: Dict[str, Any]) -> int:
         print(f"CONTEXT={m.get('context_length', '?')}")
         print(f"MAX_OUTPUT={model_max_output(m)}")
         print(f"MODALITY={m.get('modality', '?')}")
-        endpoint = m.get("endpoint")
-        if endpoint:
-            print(f"ENDPOINT_HINT={endpoint}")
+        if m.get("endpoint"):
+            print(f"ENDPOINT_HINT={m.get('endpoint')}")
         for w in res.get("warnings", []):
             print(f"WARNING={w}")
         if status == "AMBIGUOUS":
@@ -1247,13 +896,14 @@ def emit_json(res: Dict[str, Any], meta: Dict[str, Any]) -> int:
             "modality": m.get("modality"),
             "endpoint": m.get("endpoint"),
             "score": m.get("_score"),
+            "reasoning": m.get("reasoning"),
+            "supported_parameters": m.get("supported_parameters"),
         }
 
     out = {k: v for k, v in res.items() if k not in {"model", "candidates"}}
     out["model"] = slim_model(res.get("model") or {})
     out["candidates"] = [slim_model(m) for m in (res.get("candidates") or [])]
     out["model_list"] = meta
-
     print(json.dumps(out, indent=2, sort_keys=True))
     return 0 if res.get("status") in {"OK", "UNVERIFIED"} else (2 if res.get("status") == "AMBIGUOUS" else 1)
 
@@ -1296,7 +946,6 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     query_text = " ".join(args.query).strip()
     force_for_exact_slug = bool(query_text and parse_slug_like(query_text))
-
     models, meta = load_models(force_refresh=args.refresh or force_for_exact_slug, offline=args.offline)
 
     if args.refresh and args.list is None and not args.query:

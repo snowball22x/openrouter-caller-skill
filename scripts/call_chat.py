@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -30,6 +31,7 @@ import resolve_model  # type: ignore  # local file
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 KNOWN_SUFFIXES = {"free", "nitro", "floor", "thinking", "extended", "exacto", "online"}
 EFFORT_TIERS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+EFFORT_ORDER = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
 
 BUDGETS_ANTHROPIC = {
     "none": 0,
@@ -69,14 +71,11 @@ def eprint(*args: Any) -> None:
 
 
 def strip_suffix(model_id: str) -> str:
-    if ":" in model_id:
-        base, suffix = model_id.rsplit(":", 1)
-        if suffix in KNOWN_SUFFIXES:
-            return base
-    return model_id
+    base, _ = resolve_model.strip_model_suffix(model_id)
+    return base
 
 
-def resolve_or_exit(model_text: str, purpose: str = "model") -> str:
+def resolve_or_exit(model_text: str, purpose: str = "model") -> Tuple[str, Dict[str, Any]]:
     models, meta = resolve_model.load_models(
         force_refresh=bool(resolve_model.parse_slug_like(model_text)),
         offline=False,
@@ -98,7 +97,7 @@ def resolve_or_exit(model_text: str, purpose: str = "model") -> str:
         raise SystemExit(1)
     for w in res.get("warnings", []):
         eprint(f"WARNING[{purpose}]={w}")
-    return str(res["use_slug"])
+    return str(res["use_slug"]), dict(res.get("model") or {})
 
 
 def post_json(url: str, headers: Dict[str, str], payload: Dict[str, Any], timeout: int) -> Dict[str, Any]:
@@ -160,18 +159,77 @@ def effort_gemini3(tier: str) -> str:
     return "high"
 
 
-def effort_anthropic_adaptive(tier: str) -> str:
-    if tier in {"minimal", "low"}:
-        return "low"
-    if tier == "medium":
-        return "medium"
-    if tier == "max":
-        return "max"
-    return "high"
-
-
 def effort_deepseek_v4(tier: str) -> str:
     return "xhigh" if tier in {"xhigh", "max"} else "high"
+
+
+def nearest_supported_effort(tier: str, supported: List[str], default: Optional[str] = None) -> Optional[str]:
+    supported_clean = [s for s in supported if s in EFFORT_TIERS]
+    if not supported_clean:
+        return None
+    if tier in supported_clean:
+        return tier
+    if default in supported_clean and tier == "none":
+        return default
+
+    target = EFFORT_ORDER.index("minimal" if tier == "none" else tier)
+    best = min(supported_clean, key=lambda s: (abs(EFFORT_ORDER.index(s) - target), -EFFORT_ORDER.index(s)))
+    return best
+
+
+def provider_budget(provider: str, tier: str, max_tokens: int) -> int:
+    if provider == "anthropic":
+        return clamp_budget_for_max_tokens(BUDGETS_ANTHROPIC[tier], max_tokens, "anthropic")
+    if provider == "google":
+        return BUDGETS_GEMINI[tier]
+    if provider == "qwen":
+        return clamp_budget_for_max_tokens(BUDGETS_QWEN[tier], max_tokens, "qwen")
+    return clamp_budget_for_max_tokens(BUDGETS_QWEN[tier], max_tokens, provider or "model")
+
+
+def dynamic_reasoning_from_metadata(model: str, model_info: Dict[str, Any], tier: str, max_tokens: int) -> Optional[Dict[str, Any]]:
+    reasoning = model_info.get("reasoning")
+    supported_parameters = model_info.get("supported_parameters")
+    if not isinstance(reasoning, dict):
+        if isinstance(supported_parameters, list) and "reasoning" not in supported_parameters:
+            return {}
+        return None
+
+    base = strip_suffix(model)
+    provider = base.split("/", 1)[0].lstrip("~") if "/" in base else ""
+    supported = reasoning.get("supported_efforts")
+    supported_list = supported if isinstance(supported, list) else []
+    supports_max_tokens = bool(reasoning.get("supports_max_tokens"))
+    mandatory = bool(reasoning.get("mandatory"))
+    default_effort = reasoning.get("default_effort") if isinstance(reasoning.get("default_effort"), str) else None
+
+    if tier == "none":
+        if not mandatory:
+            if supports_max_tokens and provider in {"google", "qwen", "anthropic"}:
+                return {"reasoning": {"max_tokens": 0}}
+            return {}
+        if supports_max_tokens and not supported_list:
+            return {"reasoning": {"max_tokens": provider_budget(provider, "minimal", max_tokens)}}
+        chosen = nearest_supported_effort("minimal", supported_list, default_effort)
+        if chosen:
+            return {"reasoning": {"effort": chosen}}
+        return {"reasoning": {"enabled": True}}
+
+    if supports_max_tokens and not supported_list:
+        return {"reasoning": {"max_tokens": provider_budget(provider, tier, max_tokens)}}
+
+    if supported_list:
+        chosen = nearest_supported_effort(tier, supported_list, default_effort)
+        if chosen:
+            return {"reasoning": {"effort": chosen}}
+
+    if supports_max_tokens:
+        return {"reasoning": {"max_tokens": provider_budget(provider, tier, max_tokens)}}
+
+    if mandatory or reasoning.get("default_enabled"):
+        return {"reasoning": {"enabled": True}}
+
+    return None
 
 
 def is_anthropic_adaptive(model: str) -> bool:
@@ -191,18 +249,18 @@ def is_anthropic_adaptive(model: str) -> bool:
     )
 
 
-def build_reasoning_payload(model: str, tier: Optional[str], max_tokens: int) -> Dict[str, Any]:
+def build_reasoning_payload(model: str, tier: Optional[str], max_tokens: int, model_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     OpenRouter-normalized reasoning mapper.
 
-    Verified provider-native equivalents:
-      - OpenAI: reasoning.effort
-      - Anthropic older: thinking.budget_tokens; OpenRouter sends reasoning.max_tokens
-      - Anthropic 4.6+/4.7+/4.8+/Sonnet5/Fable5: adaptive thinking; OpenRouter sends reasoning.effort
-      - Gemini 2.5: thinkingBudget; OpenRouter sends reasoning.max_tokens
-      - Gemini 3.x/3.5: thinkingLevel; OpenRouter sends reasoning.effort
-      - DeepSeek V4: thinking.type + reasoning_effort high/max; OpenRouter sends reasoning.effort high/xhigh
-      - Kimi K2.x: thinking.type enabled/disabled; OpenRouter sends reasoning where exposed
+    Preferred source of truth:
+      - Use /models.reasoning metadata when available.
+      - Otherwise fall back to conservative family-specific mappings.
+
+    OpenRouter reasoning object supports:
+      - reasoning.effort: max|xhigh|high|medium|low|minimal|none when supported
+      - reasoning.max_tokens: explicit reasoning-token budget when supported
+      - reasoning.enabled: enable provider default reasoning
     """
     if not tier:
         return {}
@@ -213,9 +271,16 @@ def build_reasoning_payload(model: str, tier: Optional[str], max_tokens: int) ->
     provider = base.split("/", 1)[0].lstrip("~") if "/" in base else ""
     tail = base.split("/", 1)[1] if "/" in base else base
 
+    if model_info:
+        dynamic = dynamic_reasoning_from_metadata(model, model_info, tier, max_tokens)
+        if dynamic is not None:
+            return dynamic
+
     if tier == "none":
         if provider == "google" and tail.startswith("gemini-2.5"):
             return {"reasoning": {"max_tokens": 0}}
+        if provider == "google" and tail.startswith("gemini-3"):
+            return {"reasoning": {"effort": "minimal"}}
         return {}
 
     if provider == "openai":
@@ -225,16 +290,16 @@ def build_reasoning_payload(model: str, tier: Optional[str], max_tokens: int) ->
 
     if provider == "anthropic":
         if is_anthropic_adaptive(base):
-            return {"reasoning": {"effort": effort_anthropic_adaptive(tier)}}
+            mapped = "low" if tier == "minimal" else tier
+            return {"reasoning": {"effort": mapped}}
         budget = clamp_budget_for_max_tokens(BUDGETS_ANTHROPIC[tier], max_tokens, "anthropic")
         return {"reasoning": {"max_tokens": budget}}
 
     if provider == "google" and tail.startswith("gemini-"):
-        if tail.startswith(("gemini-3", "gemini-3.1", "gemini-3.5")):
+        if tail.startswith("gemini-3"):
             return {"reasoning": {"effort": effort_gemini3(tier)}}
         if tail.startswith("gemini-2.5"):
-            budget = BUDGETS_GEMINI[tier]
-            return {"reasoning": {"max_tokens": budget}}
+            return {"reasoning": {"max_tokens": BUDGETS_GEMINI[tier]}}
         return {}
 
     if provider == "deepseek":
@@ -245,10 +310,9 @@ def build_reasoning_payload(model: str, tier: Optional[str], max_tokens: int) ->
         return {}
 
     if provider == "moonshotai" and tail.startswith("kimi-k2"):
-        mapped = "xhigh" if tier == "max" else tier
-        if mapped == "minimal":
-            mapped = "low"
-        return {"reasoning": {"effort": mapped}}
+        if tier == "none":
+            return {}
+        return {"reasoning": {"enabled": True}}
 
     if provider == "qwen" and ("thinking" in tail or tail in {"qwen-plus-2025-07-28"}):
         budget = clamp_budget_for_max_tokens(BUDGETS_QWEN[tier], max_tokens, "qwen")
@@ -258,13 +322,19 @@ def build_reasoning_payload(model: str, tier: Optional[str], max_tokens: int) ->
         mapped = "xhigh" if tier == "max" else tier
         return {"reasoning": {"effort": mapped}}
 
-    # Sakana Fugu Ultra: supports reasoning.effort (same OpenRouter standard format)
     if provider == "sakana" and tail.startswith("fugu"):
-        return {"reasoning": {"effort": effort_low_medium_high(tier)}}
+        mapped = tier if tier in {"high", "xhigh", "max"} else "high"
+        return {"reasoning": {"effort": mapped}}
 
-    # Z.AI GLM 5.x: supports reasoning.effort (low/medium/high); GLM 4.x does not
     if provider == "z-ai" and re.match(r"glm-5", tail):
-        return {"reasoning": {"effort": effort_low_medium_high(tier)}}
+        mapped = tier if tier in {"high", "xhigh", "max"} else "high"
+        if mapped == "max":
+            mapped = "xhigh"
+        return {"reasoning": {"effort": mapped}}
+
+    if provider == "nvidia" and tail.startswith("nemotron-3"):
+        mapped = "high" if tier in {"high", "xhigh", "max"} else "medium"
+        return {"reasoning": {"effort": mapped}}
 
     return {}
 
@@ -282,7 +352,8 @@ def make_web_search_tool() -> Dict[str, Any]:
 
 
 def make_advisor_tool(reasoning_effort: str) -> Dict[str, Any]:
-    advisor_model = resolve_or_exit("~anthropic/claude-opus-latest", "advisor model")
+    advisor_model, advisor_info = resolve_or_exit("~anthropic/claude-opus-latest", "advisor model")
+    reasoning = build_reasoning_payload(advisor_model, reasoning_effort if reasoning_effort != "none" else "medium", 8000, advisor_info).get("reasoning", {"effort": "medium"})
     return {
         "type": "openrouter:advisor",
         "parameters": {
@@ -292,14 +363,15 @@ def make_advisor_tool(reasoning_effort: str) -> Dict[str, Any]:
             "forward_transcript": False,
             "max_tool_calls": 6,
             "max_completion_tokens": 8000,
-            "reasoning": {"effort": effort_anthropic_adaptive(reasoning_effort if reasoning_effort != "none" else "medium")},
+            "reasoning": reasoning,
             "temperature": 0.1,
         },
     }
 
 
 def make_subagent_tool() -> Dict[str, Any]:
-    worker_model = resolve_or_exit("~anthropic/claude-haiku-latest", "subagent model")
+    worker_model, worker_info = resolve_or_exit("~anthropic/claude-haiku-latest", "subagent model")
+    reasoning = build_reasoning_payload(worker_model, "low", 6000, worker_info).get("reasoning", {"effort": "low"})
     return {
         "type": "openrouter:subagent",
         "parameters": {
@@ -307,7 +379,7 @@ def make_subagent_tool() -> Dict[str, Any]:
             "instructions": "You are a fast, focused worker. Complete delegated tasks exactly as specified.",
             "max_tool_calls": 5,
             "max_completion_tokens": 6000,
-            "reasoning": {"effort": "low"},
+            "reasoning": reasoning,
             "temperature": 0.2,
         },
     }
@@ -315,11 +387,12 @@ def make_subagent_tool() -> Dict[str, Any]:
 
 def make_fusion_tool(reasoning_effort: str) -> Dict[str, Any]:
     analysis_models = [
-        resolve_or_exit("~anthropic/claude-sonnet-latest", "fusion analysis model"),
-        resolve_or_exit("~openai/gpt-latest", "fusion analysis model"),
-        resolve_or_exit("~google/gemini-pro-latest", "fusion analysis model"),
+        resolve_or_exit("~anthropic/claude-sonnet-latest", "fusion analysis model")[0],
+        resolve_or_exit("~openai/gpt-latest", "fusion analysis model")[0],
+        resolve_or_exit("~google/gemini-pro-latest", "fusion analysis model")[0],
     ]
-    judge_model = resolve_or_exit("~anthropic/claude-opus-latest", "fusion judge model")
+    judge_model, judge_info = resolve_or_exit("~anthropic/claude-opus-latest", "fusion judge model")
+    reasoning = build_reasoning_payload(judge_model, reasoning_effort if reasoning_effort != "none" else "medium", 12000, judge_info).get("reasoning", {"effort": "medium"})
     return {
         "type": "openrouter:fusion",
         "parameters": {
@@ -327,7 +400,7 @@ def make_fusion_tool(reasoning_effort: str) -> Dict[str, Any]:
             "model": judge_model,
             "max_tool_calls": 8,
             "max_completion_tokens": 12000,
-            "reasoning": {"effort": reasoning_effort if reasoning_effort in {"low", "medium", "high"} else "medium"},
+            "reasoning": reasoning,
             "temperature": 0.2,
         },
     }
@@ -391,7 +464,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser.add_argument("--tools", default="", help="Comma list: web_search,advisor,subagent,fusion")
     parser.add_argument("--reasoning-effort", choices=EFFORT_TIERS, default="medium")
     parser.add_argument("--temperature", type=float, default=None)
-    parser.add_argument("--json-output", action="store_true", help="Print full response JSON to stdout; summary to stderr")
+    parser.add_argument("--json-output", action="store_true", help="Print full API response JSON to stdout; summary to stderr")
     parser.add_argument("--timeout", type=int, default=600)
     parser.add_argument("--tool-choice-required", action="store_true", help="Force tool use with tool_choice=required")
     parser.add_argument("--provider-json", help="Optional JSON object for OpenRouter provider routing")
@@ -401,7 +474,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 def main(argv: Optional[List[str]] = None) -> int:
     args = parse_args(argv)
     try:
-        model = resolve_or_exit(args.model, "request model")
+        model, model_info = resolve_or_exit(args.model, "request model")
 
         messages: List[Dict[str, str]] = []
         if args.system:
@@ -414,7 +487,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             "max_tokens": args.max_tokens,
         }
 
-        data.update(build_reasoning_payload(model, args.reasoning_effort, args.max_tokens))
+        data.update(build_reasoning_payload(model, args.reasoning_effort, args.max_tokens, model_info))
 
         if args.temperature is not None:
             data["temperature"] = args.temperature

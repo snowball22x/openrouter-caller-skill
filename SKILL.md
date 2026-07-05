@@ -12,7 +12,7 @@ description: "Call OpenRouter models safely. Use when a user asks to call OpenRo
 | Resolve before every API call | `python3.11 /home/ubuntu/skills/openrouter-caller/scripts/resolve_model.py "MODEL TEXT"` |
 | Resolve nested server-tool models | advisor/subagent `parameters.model`; fusion `analysis_models` and `model` |
 | `STATUS=OK` | Use `USE_SLUG` exactly |
-| `STATUS=UNVERIFIED` | Use only for exact-looking user slug when validation unavailable |
+| `STATUS=UNVERIFIED` | Use only for exact-looking user slug when validation is unavailable |
 | `STATUS=AMBIGUOUS` | Do not call; ask user or inspect candidates |
 | `STATUS=ERROR` | Do not call; fix model request |
 | User says latest without version | Prefer tilde alias, e.g. `~anthropic/claude-sonnet-latest` |
@@ -25,7 +25,8 @@ description: "Call OpenRouter models safely. Use when a user asks to call OpenRo
 | task | endpoint/script |
 |---|---|
 | chat/text/reasoning/tools/search | `scripts/call_chat.py` → `/api/v1/chat/completions` |
-| image generation/editing | `scripts/call_image.py` → `/api/v1/chat/completions` with `modalities` |
+| image generation/editing | `scripts/call_image.py` → `/api/v1/images` |
+| in-chat image generation by a text model | `/api/v1/chat/completions` with `openrouter:image_generation` server tool |
 | video generation | `scripts/call_video.py` → `/api/v1/videos` async submit+poll |
 | TTS/speech | `scripts/call_tts.py` → `/api/v1/audio/speech` |
 
@@ -50,6 +51,8 @@ description: "Call OpenRouter models safely. Use when a user asks to call OpenRo
 | `:exacto` | quality-first routing for reliability/tool use |
 | `:online` | deprecated; prefer `openrouter:web_search` |
 
+Suffixes may be composed when OpenRouter supports the combination, e.g. `model:free:online`. Prefer server tools over `:online`.
+
 ## S_RE — Reasoning Effort
 
 | tier | auto-assignment rule |
@@ -62,17 +65,19 @@ description: "Call OpenRouter models safely. Use when a user asks to call OpenRo
 | xhigh | adversarial critique, novel research, complex multi-step reasoning |
 | max | only when user explicitly requests maximum effort; very expensive |
 
-| family | OpenRouter call_chat mapping | verified provider/native mapping |
+OpenRouter exposes current reasoning support per model in `/api/v1/models` under `reasoning`. Prefer that metadata over hard-coded family assumptions.
+
+| family | OpenRouter call_chat mapping | provider/native note |
 |---|---|---|
-| OpenAI o-series `o3/o4/o4-mini/o3-pro` | `reasoning.effort ∈ low|medium|high`; none/minimal→low; xhigh/max→high | OpenAI `reasoning:{effort}` low/medium/high |
-| OpenAI GPT-5.x | `reasoning.effort ∈ low|medium|high` when supported; else omit | OpenAI GPT-5.5 supports none/low/medium/high/xhigh; OpenRouter normalizes |
-| Anthropic Claude older thinking models | `reasoning.max_tokens=N`; none→omit | raw Anthropic `thinking:{type:"enabled",budget_tokens:N}`; N map 1024/2048/8192/16000/32000/64000 |
-| Anthropic Claude 4.6+/4.7+/4.8+/Sonnet5/Fable5 | `reasoning.effort`; none→omit | adaptive thinking; manual `budget_tokens` deprecated/unsupported on newer models |
-| Google Gemini 2.5 | `reasoning.max_tokens=N`; none→0 | raw Google `generationConfig.thinkingConfig.thinkingBudget` |
-| Google Gemini 3.x/3.5 | `reasoning.effort`; none→minimal because 3.x cannot disable | raw Google `generationConfig.thinkingConfig.thinkingLevel` |
-| DeepSeek R1/V4 | `reasoning.effort`; V4 supports high/xhigh; xhigh=max | native DeepSeek `thinking.type` + `reasoning_effort` high/max |
-| Kimi K2.x | `reasoning.effort` or omit for none | native Moonshot `thinking.type` enabled/disabled; no separate budget |
-| Qwen thinking variants | `reasoning.max_tokens=N` when exposed | Alibaba-style `thinking_budget` varies by model |
+| OpenAI o-series / GPT-5.x | `reasoning.effort`, mapped to the nearest supported effort from `/models.reasoning.supported_efforts` | OpenAI-style effort |
+| Anthropic older thinking models | `reasoning.max_tokens=N`; none→omit | raw Anthropic `thinking.budget_tokens`; minimum 1024 |
+| Anthropic adaptive-thinking models | `reasoning.effort`; none→omit unless model requires reasoning | newer Claude models expose selectable efforts; use supported efforts |
+| Google Gemini 2.5 | `reasoning.max_tokens=N`; none→0 when explicit disable is needed | Google `thinkingBudget` |
+| Google Gemini 3.x/3.5 | `reasoning.effort`; none→minimal if reasoning is mandatory | Google `thinkingLevel`; xhigh/max map down if unsupported |
+| DeepSeek R1/V4 | `reasoning.effort`, nearest supported value | V4 may expose high/xhigh-style routing through OpenRouter |
+| Kimi K2.x | use `/models.reasoning`; otherwise enable/omit only | Moonshot controls thinking natively |
+| Qwen thinking variants | `reasoning.max_tokens=N` when exposed | Alibaba-style `thinking_budget`; varies by model |
+| Sakana/Z.AI/Nemotron/other reasoning models | use `/models.reasoning.supported_efforts` or `supports_max_tokens` | do not assume low/medium/high are all accepted |
 | unsupported families | omit reasoning params | do not force unsupported params |
 
 | tier | Anthropic/Gemini2.5/Qwen budget |
@@ -83,14 +88,14 @@ description: "Call OpenRouter models safely. Use when a user asks to call OpenRo
 | medium | 4096 Gemini; 8192 Anthropic/Qwen |
 | high | 8192 Gemini; 16000 Anthropic/Qwen |
 | xhigh | 16384 Gemini; 32000 Anthropic/Qwen |
-| max | 32768 Gemini; 64000 Anthropic/Qwen or model max |
+| max | 32768 Gemini; 64000 Anthropic/Qwen, or lower if model/output cap requires |
 
 ## S3 — Direct Scripts
 
 | task | one-liner |
 |---|---|
 | chat | `python3.11 scripts/call_chat.py --model "USE_SLUG" --prompt "..." --max-tokens 16000 --reasoning-effort medium` |
-| chat JSON | `python3.11 scripts/call_chat.py --model "USE_SLUG" --prompt "..." --json-output` |
+| full response JSON | `python3.11 scripts/call_chat.py --model "USE_SLUG" --prompt "..." --json-output` |
 | chat + web search | `python3.11 scripts/call_chat.py --model "USE_SLUG" --prompt "Cite sources." --tools web_search` |
 | chat + advisor | `python3.11 scripts/call_chat.py --model "USE_SLUG" --prompt "Review design." --tools advisor --reasoning-effort high` |
 | chat + fusion | `python3.11 scripts/call_chat.py --model "USE_SLUG" --prompt "Compare expert views." --tools fusion` |
@@ -129,7 +134,7 @@ description: "Call OpenRouter models safely. Use when a user asks to call OpenRo
 | reformatting | `~anthropic/claude-haiku-latest` | low | strong instruction following |
 | code_boilerplate | `qwen/qwen3-coder` | medium | efficient code generation |
 | focused_research | `~google/gemini-pro-latest` | medium | strong synthesis with tools |
-| chunk_processing | `openai/gpt-5.4-mini` | low | cheap parallel chunk work |
+| chunk_processing | `~openai/gpt-mini-latest` | low | cheap parallel chunk work |
 | vision_task | `~google/gemini-pro-latest` | medium | strong multimodal handling |
 | math_reasoning | `~openai/gpt-latest` | high | deliberate reasoning |
 | long_document | `~google/gemini-pro-latest` | medium | long-context strength |
@@ -150,12 +155,12 @@ description: "Call OpenRouter models safely. Use when a user asks to call OpenRo
 
 | analysis_type | panel_models | judge_model | max_tool_calls |
 |---|---|---|---:|
-| quick_consensus | `~anthropic/claude-haiku-latest`, `openai/gpt-5.4-mini` | `~anthropic/claude-sonnet-latest` | 2 |
+| quick_consensus | `~anthropic/claude-haiku-latest`, `~openai/gpt-mini-latest` | `~anthropic/claude-sonnet-latest` | 2 |
 | balanced_review | `~anthropic/claude-sonnet-latest`, `~openai/gpt-latest`, `~google/gemini-pro-latest` | `~anthropic/claude-opus-latest` | 4 |
 | research_fusion | `~google/gemini-pro-latest`, `~anthropic/claude-sonnet-latest`, `moonshotai/kimi-k2.6` | `~anthropic/claude-opus-latest` | 8 |
 | code_review | `qwen/qwen3-coder`, `~openai/gpt-latest`, `~anthropic/claude-sonnet-latest` | `~openai/gpt-latest` | 3 |
 | adversarial_check | `~anthropic/claude-sonnet-latest`, `~openai/gpt-latest`, `~google/gemini-pro-latest` | `~anthropic/claude-opus-latest` | 5 |
-| low_cost_batch | `~google/gemini-flash-latest`, `~anthropic/claude-haiku-latest`, `openai/gpt-5.4-mini` | `~anthropic/claude-sonnet-latest` | 1 |
+| low_cost_batch | `~google/gemini-flash-latest`, `~anthropic/claude-haiku-latest`, `~openai/gpt-mini-latest` | `~anthropic/claude-sonnet-latest` | 1 |
 
 ## S9 — Minimal Checklist
 
