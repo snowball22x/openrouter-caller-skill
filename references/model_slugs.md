@@ -523,5 +523,11 @@ Use `GET /api/v1/models?output_modalities=speech` for the definitive current lis
 
 ## 21. Minimal Call Checklist
 
-1. Resolve:
-   
+1. Resolve: run the resolver and use `USE_SLUG` exactly; accept `UNVERIFIED` only for exact-looking user slugs when live validation is unavailable.
+2. Verify endpoint/modality: chat, responses, images, videos, speech, transcription, or audio understanding as appropriate.
+3. Check live metadata: context, `per_request_limits.max_completion_tokens`, `top_provider.max_completion_tokens`, supported parameters, tools, and reasoning object.
+4. Set output budget: choose `max_tokens` high enough for the task while respecting the model/provider output cap and any cost cap.
+5. Reasoning: send only supported reasoning controls; never disable mandatory reasoning; use supported efforts or token budgets from metadata.
+6. Tools: add only needed tools; prefer `openrouter:web_search` for current facts; avoid legacy `:online` for new calls.
+7. Build and call: send the resolved model, messages, optional system prompt, intentional provider routing/temperature, API key, and suitable timeout.
+8. Inspect result: verify `used_model`, `finish_reason`, and `usage`; if `length`, continue or retry with higher tokens after checking the model output cap.

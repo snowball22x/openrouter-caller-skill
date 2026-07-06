@@ -4,6 +4,7 @@ Reusable OpenRouter chat caller.
 
 CLI:
   python3.11 call_chat.py --model SLUG --prompt "..." [--max-tokens N]
+      [--max-tokens-cap N]
       [--tools web_search,advisor,subagent,fusion]
       [--reasoning-effort none|minimal|low|medium|high|xhigh|max]
       [--system "..."] [--json-output]
@@ -32,6 +33,8 @@ API_URL = "https://openrouter.ai/api/v1/chat/completions"
 KNOWN_SUFFIXES = {"free", "nitro", "floor", "thinking", "extended", "exacto", "online"}
 EFFORT_TIERS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
 EFFORT_ORDER = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+DEFAULT_AUTO_MAX_TOKENS_FALLBACK = 16000
+DEFAULT_AUTO_MAX_TOKENS_CAP = 32000
 
 BUDGETS_ANTHROPIC = {
     "none": 0,
@@ -129,6 +132,71 @@ def openrouter_headers() -> Dict[str, str]:
     if os.environ.get("OPENROUTER_APP_TITLE"):
         headers["X-Title"] = os.environ["OPENROUTER_APP_TITLE"]
     return headers
+
+
+def coerce_positive_int(value: Any) -> Optional[int]:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if value > 0 else None
+    if isinstance(value, float):
+        if value.is_integer() and value > 0:
+            return int(value)
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        if not text or text.lower() in {"?", "n/a", "na", "none", "null", "unknown"}:
+            return None
+        text = text.replace(",", "").replace("_", "")
+        if re.fullmatch(r"\d+", text):
+            n = int(text)
+            return n if n > 0 else None
+        if re.fullmatch(r"\d+\.0+", text):
+            n = int(float(text))
+            return n if n > 0 else None
+    return None
+
+
+def nested_positive_int(obj: Dict[str, Any], path: Tuple[str, ...]) -> Optional[int]:
+    cur: Any = obj
+    for key in path:
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(key)
+    return coerce_positive_int(cur)
+
+
+def model_max_completion_tokens(model_info: Dict[str, Any]) -> Optional[int]:
+    """
+    Return the effective model output cap from live /models metadata.
+
+    OpenRouter can expose both a per-request cap and the selected/top provider cap.
+    The effective caller-safe cap is the smaller positive value when both are known.
+    """
+    caps: List[int] = []
+
+    per_request_cap = nested_positive_int(model_info, ("per_request_limits", "max_completion_tokens"))
+    if per_request_cap is not None:
+        caps.append(per_request_cap)
+
+    top_provider_cap = nested_positive_int(model_info, ("top_provider", "max_completion_tokens"))
+    if top_provider_cap is not None:
+        caps.append(top_provider_cap)
+
+    if not caps:
+        return None
+    return min(caps)
+
+
+def auto_select_max_tokens(model_info: Dict[str, Any], auto_cap: int) -> Tuple[int, Optional[int]]:
+    if auto_cap <= 0:
+        raise OpenRouterCallError("--max-tokens-cap must be a positive integer when --max-tokens is omitted")
+
+    model_cap = model_max_completion_tokens(model_info)
+    if model_cap is None:
+        return DEFAULT_AUTO_MAX_TOKENS_FALLBACK, None
+
+    return min(model_cap, auto_cap), model_cap
 
 
 def clamp_budget_for_max_tokens(budget: int, max_tokens: int, family: str) -> int:
@@ -452,7 +520,7 @@ def print_summary(result: Dict[str, Any], requested_model: str, stream: Any) -> 
     elif used_model:
         print(f"OK: model used = {used_model}", file=stream)
     if finish_reason == "length":
-        print("TRUNCATED: increase --max-tokens or continue in a follow-up request.", file=stream)
+        print("TRUNCATED: increase --max-tokens/--max-tokens-cap, check the model output cap, or continue in a follow-up request.", file=stream)
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
@@ -460,7 +528,8 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser.add_argument("--model", required=True, help="Exact slug or model text; resolver is always run first")
     parser.add_argument("--prompt", required=True, help="User prompt")
     parser.add_argument("--system", help="Optional system prompt")
-    parser.add_argument("--max-tokens", type=int, default=16000, help="max_tokens for completion")
+    parser.add_argument("--max-tokens", type=int, default=None, help="max_tokens for completion; if omitted, auto-select from live model output cap")
+    parser.add_argument("--max-tokens-cap", type=int, default=DEFAULT_AUTO_MAX_TOKENS_CAP, help="Cap for auto-selected max_tokens when --max-tokens is omitted")
     parser.add_argument("--tools", default="", help="Comma list: web_search,advisor,subagent,fusion")
     parser.add_argument("--reasoning-effort", choices=EFFORT_TIERS, default="medium")
     parser.add_argument("--temperature", type=float, default=None)
@@ -476,6 +545,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         model, model_info = resolve_or_exit(args.model, "request model")
 
+        if args.max_tokens is None:
+            max_tokens, model_cap = auto_select_max_tokens(model_info, args.max_tokens_cap)
+            model_cap_text = str(model_cap) if model_cap is not None else "unknown"
+            eprint(f"INFO: auto max_tokens={max_tokens} (model cap: {model_cap_text})")
+        else:
+            max_tokens = args.max_tokens
+
         messages: List[Dict[str, str]] = []
         if args.system:
             messages.append({"role": "system", "content": args.system})
@@ -484,10 +560,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         data: Dict[str, Any] = {
             "model": model,
             "messages": messages,
-            "max_tokens": args.max_tokens,
+            "max_tokens": max_tokens,
         }
 
-        data.update(build_reasoning_payload(model, args.reasoning_effort, args.max_tokens, model_info))
+        data.update(build_reasoning_payload(model, args.reasoning_effort, max_tokens, model_info))
 
         if args.temperature is not None:
             data["temperature"] = args.temperature
